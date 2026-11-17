@@ -1,16 +1,28 @@
 ---
+import Layout from '../layouts/Layout.astro';
+
+// 段階Aでは、投稿をコードに直接書いておく。
+// 段階Cで、この部分をD1から読み込む形に置き換える。
+const posts = [
+	{ name: 'さくら', message: 'はじめまして！', createdAt: '2026-11-01 10:00' },
+	{ name: 'たろう', message: 'Cloudflare Pagesで公開してみました。', createdAt: '2026-11-02 18:30' },
+];
 ---
 
-<html lang="en">
-	<head>
-		<meta charset="utf-8" />
-		<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-		<link rel="icon" href="/favicon.ico" />
-		<meta name="viewport" content="width=device-width" />
-		<meta name="generator" content={Astro.generator} />
-		<title>Astro</title>
-	</head>
-	<body>
-		<h1>Astro</h1>
-	</body>
-</html>
+<Layout title="トップ">
+	<h1>ひとこと掲示板</h1>
+	<p class="lead">ひとことを残していってください。</p>
+
+	<ul class="posts">
+		{
+			posts.map((post) => (
+				<li>
+					<p class="message">{post.message}</p>
+					<p class="meta">
+						{post.name}・{post.createdAt}
+					</p>
+				</li>
+			))
+		}
+	</ul>
+</Layout>

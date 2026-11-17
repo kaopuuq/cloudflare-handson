@@ -1,0 +1,9 @@
+# すべてのページに付けるセキュリティ用のヘッダー
+/*
+  X-Content-Type-Options: nosniff
+  X-Frame-Options: DENY
+  Referrer-Policy: strict-origin-when-cross-origin
+
+# CSSは1時間キャッシュさせる
+/style.css
+  Cache-Control: public, max-age=3600

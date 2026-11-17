@@ -1,0 +1,53 @@
+body {
+	max-width: 40rem;
+	margin: 0 auto;
+	padding: 0 1rem;
+	font-family: system-ui, sans-serif;
+	line-height: 1.7;
+	color: #1f2328;
+	background: #fafafa;
+}
+header {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 1rem;
+	align-items: baseline;
+	justify-content: space-between;
+	padding: 1rem 0;
+	border-bottom: 1px solid #ddd;
+}
+header nav a {
+	margin-left: 1rem;
+}
+.brand {
+	font-weight: bold;
+	text-decoration: none;
+	color: inherit;
+}
+.lead {
+	color: #555;
+}
+.posts {
+	padding: 0;
+	list-style: none;
+}
+.posts li {
+	margin-bottom: 0.75rem;
+	padding: 0.75rem 1rem;
+	background: #fff;
+	border: 1px solid #ddd;
+	border-radius: 8px;
+}
+.posts .message {
+	margin: 0;
+}
+.posts .meta {
+	margin: 0;
+	font-size: 0.85rem;
+	color: #666;
+}
+footer {
+	margin: 3rem 0 1rem;
+	font-size: 0.85rem;
+	color: #666;
+}
