@@ -1,0 +1,15 @@
+{
+	"$schema": "node_modules/wrangler/config-schema.json",
+	// Workerの名前。公開URL（<name>.<サブドメイン>.workers.dev）に使われる
+	"name": "cloudflare-handson",
+	// Workersの実行環境の挙動を、この日付の時点のものに固定する
+	"compatibility_date": "2026-11-16",
+	"assets": {
+		// astro buildの出力先をそのまま公開する
+		"directory": "./dist",
+		// 存在しないURLにはdist/404.htmlを返す
+		"not_found_handling": "404-page"
+	},
+	// バージョンごとのプレビューURLを有効にする
+	"preview_urls": true
+}

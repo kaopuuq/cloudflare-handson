@@ -21,9 +21,12 @@ Cloudflare PagesとWorkersの使い方を学ぶためのデモです。手順は
 npm install
 npm run dev      # http://localhost:4321で表示する
 npm run build    # dist/に公開用のファイルを作る
+npm run preview  # ビルドしてからWorkersのローカル環境で動かす（http://localhost:8787）
+npm run deploy   # ビルドしてからWorkersにデプロイする（wrangler loginが必要）
 ```
 
 ## ファイルの構成
 - `src/pages/`：ページ。ファイル名がそのままURLになる（`about.astro` → `/about`）
 - `src/layouts/Layout.astro`：全ページで共通の枠
 - `public/`：加工せずに公開するファイル（CSS、画像、`_headers`、`_redirects`）
+- `wrangler.jsonc`：Workersの設定（名前、公開するディレクトリなど）
