@@ -231,13 +231,13 @@ html { scroll-behavior: smooth; }
 <p>配布したリポジトリを手元に持ってきて、自分のGitHubに新しく作った空のリポジトリへpushします。以降はこの自分のリポジトリをCloudflareに連携します。</p>
 <ol class="do">
   <li>GitHubで空のリポジトリを作ります（名前は<code>cloudflare-handson</code>など。READMEは作らない）。</li>
-  <li>配布したリポジトリをcloneし、段階Aのブランチを自分のリポジトリの<code>main</code>としてpushします。
+  <li>配布したリポジトリをcloneし、段階Aの内容で自分の<code>main</code>ブランチを作ってpushします。配布したリポジトリは<code>upstream</code>、自分のリポジトリは<code>origin</code>という名前で登録します。
     <div class="code"><pre><code>git clone &lt;配布したリポジトリのURL&gt; cloudflare-handson
 cd cloudflare-handson
-git checkout step-a
 git remote rename origin upstream
 git remote add origin &lt;自分のリポジトリのURL&gt;
-git push -u origin step-a:main</code></pre></div>
+git switch -C main upstream/step-a
+git push -u origin main</code></pre></div>
   </li>
   <li>依存するパッケージを入れます。
     <div class="code"><pre><code>npm install</code></pre></div>
@@ -424,7 +424,8 @@ x-frame-options: DENY</pre></div></details>
   <li>段階Bの内容を自分の<code>main</code>に取り込みます。
     <div class="code"><pre><code>git fetch upstream
 git switch main
-git merge upstream/step-b
+git pull
+git merge --no-edit upstream/step-b
 npm install</code></pre></div>
   </li>
   <li>pushする前に、Pagesの自動デプロイを止めます。ダッシュボードでPagesのプロジェクトを開き、<span class="ui">Settings</span>の<span class="ui">Builds &amp; deployments</span>で<span class="ui">Configure Production deployments</span>を開き、<span class="ui">Enable automatic production branch deployments</span>のチェックを外して保存します。ハンズオンが終わったら、Pagesのプロジェクトは削除してかまいません。</li>
@@ -519,9 +520,10 @@ No bindings found.
 <p>投稿を受け取って保存するAPIを、Workerのコードで書きます。投稿はD1に保存します。目安は40分です。</p>
 <div class="code"><pre><code>git fetch upstream
 git switch main
-git merge upstream/step-c
+git pull
+git merge --no-edit upstream/step-c
 npm install</code></pre></div>
-<p>ハンズオンAで<code>src/pages/index.astro</code>を書き換えていると、マージで衝突します。そのときは、段階Cのファイルを採ってマージを終えます。</p>
+<p>ハンズオンAで<code>src/pages/index.astro</code>を書き換えた場所によっては、マージで衝突します。衝突したときは、段階Cのファイルを採ってマージを終えます。</p>
 <div class="code"><pre><code>git checkout --theirs src/pages/index.astro
 git add src/pages/index.astro
 git commit --no-edit
@@ -615,6 +617,7 @@ curl -X DELETE http://localhost:8787/api/posts/1 -H 'Authorization: Bearer local
 <ol class="do">
   <li>Cloudflare上にD1のデータベースを作ります。
     <div class="code"><pre><code>npx wrangler d1 create handson-db</code></pre></div>
+    <p><code>Would you like Wrangler to add it on your behalf?</code>（設定ファイルに書き足すか）と聞かれたら、<kbd>n</kbd>で断ります。<code>wrangler.jsonc</code>にはすでに<code>DB</code>の設定があり、書き足してもらうと設定が2つになるためです。</p>
   </li>
   <li>出力に表示される<code>database_id</code>を、<code>wrangler.jsonc</code>の<code>d1_databases</code>に書き足します。
     <div class="code"><pre><code>"d1_databases": [
