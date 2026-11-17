@@ -25,8 +25,17 @@ npm run preview  # ビルドしてからWorkersのローカル環境で動かす
 npm run deploy   # ビルドしてからWorkersにデプロイする（wrangler loginが必要）
 ```
 
+段階Cでは、初めに次の準備が要ります。
+```sh
+cp .dev.vars.example .dev.vars                            # ローカル用のSecret
+npx wrangler d1 migrations apply handson-db --local       # ローカルのD1にテーブルを作る
+```
+
 ## ファイルの構成
 - `src/pages/`：ページ。ファイル名がそのままURLになる（`about.astro` → `/about`）
 - `src/layouts/Layout.astro`：全ページで共通の枠
 - `public/`：加工せずに公開するファイル（CSS、画像、`_headers`、`_redirects`）
-- `wrangler.jsonc`：Workersの設定（名前、公開するディレクトリなど）
+- `wrangler.jsonc`：Workersの設定（名前、公開するディレクトリ、D1との接続など）
+- `src/worker.ts`：`/api/`で始まるURLを処理するWorkerのコード
+- `migrations/`：D1のテーブルを作るSQL
+- `worker-configuration.d.ts`：`npx wrangler types`で作った型の定義。`wrangler.jsonc`を変えたら作り直す

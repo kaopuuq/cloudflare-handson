@@ -1,28 +1,82 @@
 ---
 import Layout from '../layouts/Layout.astro';
-
-// 段階Aでは、投稿をコードに直接書いておく。
-// 段階Cで、この部分をD1から読み込む形に置き換える。
-const posts = [
-	{ name: 'さくら', message: 'はじめまして！', createdAt: '2026-11-01 10:00' },
-	{ name: 'たろう', message: 'Cloudflare Pagesで公開してみました。', createdAt: '2026-11-02 18:30' },
-];
 ---
 
 <Layout title="トップ">
 	<h1>ひとこと掲示板</h1>
 	<p class="lead">ひとことを残していってください。</p>
 
-	<ul class="posts">
-		{
-			posts.map((post) => (
-				<li>
-					<p class="message">{post.message}</p>
-					<p class="meta">
-						{post.name}・{post.createdAt}
-					</p>
-				</li>
-			))
-		}
+	<form id="post-form">
+		<label>
+			名前
+			<input name="name" maxlength="20" required />
+		</label>
+		<label>
+			ひとこと
+			<textarea name="message" maxlength="140" rows="3" required></textarea>
+		</label>
+		<button type="submit">投稿する</button>
+		<p id="form-error" class="error" hidden></p>
+	</form>
+
+	<ul id="posts" class="posts">
+		<li class="meta">読み込み中…</li>
 	</ul>
 </Layout>
+
+<script>
+	// ブラウザで動くコード。/api/postsから投稿を読み込み、フォームの内容を送る。
+	type Post = { id: number; name: string; message: string; created_at: string };
+
+	const list = document.querySelector<HTMLUListElement>('#posts')!;
+	const form = document.querySelector<HTMLFormElement>('#post-form')!;
+	const errorText = document.querySelector<HTMLParagraphElement>('#form-error')!;
+
+	function render(posts: Post[]) {
+		list.replaceChildren();
+		if (posts.length === 0) {
+			const empty = document.createElement('li');
+			empty.className = 'meta';
+			empty.textContent = 'まだ投稿はありません。';
+			list.append(empty);
+			return;
+		}
+		for (const post of posts) {
+			const item = document.createElement('li');
+			const message = document.createElement('p');
+			message.className = 'message';
+			message.textContent = post.message;
+			const meta = document.createElement('p');
+			meta.className = 'meta';
+			meta.textContent = `${post.name}・${post.created_at}（UTC）`;
+			item.append(message, meta);
+			list.append(item);
+		}
+	}
+
+	async function load() {
+		const res = await fetch('/api/posts');
+		render(await res.json());
+	}
+
+	form.addEventListener('submit', async (event) => {
+		event.preventDefault();
+		const data = new FormData(form);
+		const res = await fetch('/api/posts', {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify({ name: data.get('name'), message: data.get('message') }),
+		});
+		if (!res.ok) {
+			const { error } = await res.json();
+			errorText.textContent = error;
+			errorText.hidden = false;
+			return;
+		}
+		errorText.hidden = true;
+		form.reset();
+		await load();
+	});
+
+	load();
+</script>

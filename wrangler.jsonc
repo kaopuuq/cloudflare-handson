@@ -4,11 +4,29 @@
 	"name": "cloudflare-handson",
 	// Workersの実行環境の挙動を、この日付の時点のものに固定する
 	"compatibility_date": "2026-11-16",
+	// APIを処理するWorkerのコード
+	"main": "src/worker.ts",
 	"assets": {
 		// astro buildの出力先をそのまま公開する
 		"directory": "./dist",
+		// Workerのコードから静的ファイルを返すときに使う名前（env.ASSETS）
+		"binding": "ASSETS",
 		// 存在しないURLにはdist/404.htmlを返す
-		"not_found_handling": "404-page"
+		"not_found_handling": "404-page",
+		// /api/で始まるURLだけをWorkerのコードで処理する。ほかは静的ファイルを返す
+		"run_worker_first": ["/api/*"]
+	},
+	// D1データベースとの接続。コードからは env.DBで使う
+	"d1_databases": [
+		{
+			"binding": "DB",
+			"database_name": "handson-db",
+			"migrations_dir": "migrations"
+		}
+	],
+	// 環境変数。秘密にしない値だけをここに書く
+	"vars": {
+		"MAX_MESSAGE_LENGTH": "140"
 	},
 	// バージョンごとのプレビューURLを有効にする
 	"preview_urls": true
