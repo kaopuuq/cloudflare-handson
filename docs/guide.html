@@ -1,0 +1,775 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Cloudflareハンズオン</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=BIZ+UDPGothic:wght@400;700&family=JetBrains+Mono:wght@400;600&family=Zen+Kaku+Gothic+New:wght@700&display=swap">
+<style>
+/* 左に目次、右に本文の2段組み。狭い画面では目次を本文の上に置く */
+:root {
+  --bg: #f6f7f9;
+  --surface: #ffffff;
+  --fg: #1c2330;
+  --muted: #5a6475;
+  --line: #d9dee6;
+  --accent: #0b6e69;
+  --accent-soft: #e2f1ef;
+  --code-bg: #17202b;
+  --code-fg: #e6edf3;
+  --code-muted: #8b97a6;
+  --ok: #1a7f37;
+  --ok-soft: #e6f4ea;
+  --warn: #9a6700;
+  --warn-soft: #fff5d6;
+  --font-head: "Zen Kaku Gothic New", "Hiragino Sans", "Noto Sans JP", sans-serif;
+  --font-body: "BIZ UDPGothic", "Hiragino Sans", "Noto Sans JP", "Yu Gothic", sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #11161d; --surface: #182029; --fg: #e3e8ef; --muted: #9aa5b4; --line: #2b3542;
+    --accent: #4fc1b6; --accent-soft: #15302e; --code-bg: #0b1016; --code-fg: #e6edf3; --code-muted: #7d8896;
+    --ok: #57c574; --ok-soft: #14291b; --warn: #e3b341; --warn-soft: #2e2510;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #11161d; --surface: #182029; --fg: #e3e8ef; --muted: #9aa5b4; --line: #2b3542;
+  --accent: #4fc1b6; --accent-soft: #15302e; --code-bg: #0b1016; --code-fg: #e6edf3; --code-muted: #7d8896;
+  --ok: #57c574; --ok-soft: #14291b; --warn: #e3b341; --warn-soft: #2e2510;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--font-body);
+  font-size: 16px;
+  line-height: 1.85;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 0;
+}
+.wrap {
+  max-width: 1180px;
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 2rem;
+  padding-block: 2rem 4rem;
+}
+@media (min-width: 960px) {
+  .wrap { grid-template-columns: 240px minmax(0, 1fr); }
+  .toc { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 1.5rem); align-self: start; max-height: calc(100vh - 3rem); overflow-y: auto; }
+}
+main { min-width: 0; max-width: 46rem; }
+h1, h2, h3 { font-family: var(--font-head); line-height: 1.4; text-wrap: balance; }
+h1 { font-size: 2rem; margin: 0 0 0.5rem; }
+h2 { font-size: 1.5rem; margin: 3.5rem 0 1rem; padding-top: 1rem; border-top: 1px solid var(--line); scroll-margin-top: 1rem; }
+h3 { font-size: 1.15rem; margin: 2.25rem 0 0.75rem; scroll-margin-top: 1rem; }
+p, li { max-width: 65ch; }
+a { color: var(--accent); }
+a:focus-visible, button:focus-visible, input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.lead { color: var(--muted); margin: 0; }
+.eyebrow { font-size: 0.8rem; letter-spacing: 0.08em; color: var(--accent); font-weight: 700; margin: 0; }
+
+/* 目次 */
+.toc { font-size: 0.92rem; }
+.toc p { margin: 0 0 0.5rem; font-weight: 700; }
+.toc ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.1rem; }
+.toc a { display: block; padding: 0.2rem 0.6rem; border-radius: 6px; color: var(--fg); text-decoration: none; }
+.toc a:hover { background: var(--accent-soft); }
+.toc .sub a { padding-left: 1.4rem; color: var(--muted); font-size: 0.88rem; }
+.toc .progress { margin-top: 1rem; font-size: 0.85rem; color: var(--muted); }
+
+/* 段階の一覧 */
+.steps { display: grid; grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr)); gap: 0.75rem; margin: 1.5rem 0; }
+.step-card { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 0.9rem 1rem; min-width: 0; }
+.step-card b { font-family: var(--font-head); font-size: 1.05rem; display: block; }
+.step-card span { font-size: 0.88rem; color: var(--muted); display: block; }
+.branch { font-family: var(--font-mono); font-size: 0.82rem; background: var(--accent-soft); color: var(--accent); padding: 0.05rem 0.4rem; border-radius: 4px; }
+
+/* コードと出力 */
+code { font-family: var(--font-mono); font-size: 0.88em; background: var(--accent-soft); padding: 0.05rem 0.3rem; border-radius: 4px; overflow-wrap: anywhere; }
+.code { position: relative; margin: 0.75rem 0 1.25rem; }
+.code pre { margin: 0; background: var(--code-bg); color: var(--code-fg); padding: 0.9rem 1rem; border-radius: 8px; overflow-x: auto; font-family: var(--font-mono); font-size: 0.86rem; line-height: 1.65; }
+.code pre code { background: none; padding: 0; font-size: inherit; color: inherit; overflow-wrap: normal; }
+.code .c { color: var(--code-muted); }
+.code .label { position: absolute; top: 0; left: 1rem; transform: translateY(-50%); font-size: 0.72rem; letter-spacing: 0.06em; background: var(--surface); color: var(--muted); border: 1px solid var(--line); border-radius: 4px; padding: 0 0.4rem; line-height: 1.5; }
+.copy { position: absolute; top: 0.5rem; right: 0.5rem; font: inherit; font-size: 0.75rem; background: transparent; color: var(--code-muted); border: 1px solid var(--code-muted); border-radius: 5px; padding: 0.1rem 0.5rem; cursor: pointer; }
+.copy:hover { color: var(--code-fg); border-color: var(--code-fg); }
+details.result { margin: -0.5rem 0 1.5rem; border: 1px solid var(--line); border-left: 4px solid var(--ok); border-radius: 8px; background: var(--surface); }
+details.result summary { cursor: pointer; padding: 0.5rem 0.9rem; font-size: 0.9rem; color: var(--ok); font-weight: 700; }
+details.result .inner { padding: 0 0.9rem 0.75rem; }
+details.result pre { margin: 0; background: var(--bg); color: var(--fg); padding: 0.75rem 0.9rem; border-radius: 6px; overflow-x: auto; font-family: var(--font-mono); font-size: 0.8rem; line-height: 1.6; }
+details.result p { font-size: 0.9rem; margin: 0.5rem 0; }
+
+/* 手順 */
+ol.do { counter-reset: do; list-style: none; padding: 0; margin: 1rem 0; display: grid; gap: 0.25rem; }
+ol.do > li { counter-increment: do; position: relative; padding-left: 2.6rem; max-width: none; }
+ol.do > li::before { content: counter(do); position: absolute; left: 0; top: 0.1rem; width: 1.8rem; height: 1.8rem; border-radius: 50%; background: var(--accent); color: var(--surface); font-weight: 700; font-size: 0.9rem; display: grid; place-items: center; line-height: 1; }
+.done-check { display: inline-flex; align-items: center; gap: 0.4rem; font-size: 0.88rem; color: var(--muted); margin: 0.5rem 0 0; cursor: pointer; }
+.done-check input { width: 1.05rem; height: 1.05rem; accent-color: var(--accent); }
+.ui { font-weight: 700; background: var(--surface); border: 1px solid var(--line); border-radius: 4px; padding: 0 0.35rem; white-space: nowrap; }
+
+/* 注意書き */
+.note, .warn { border-radius: 8px; padding: 0.75rem 1rem; margin: 1rem 0; font-size: 0.95rem; }
+.note { background: var(--accent-soft); }
+.warn { background: var(--warn-soft); }
+.note b, .warn b { display: block; margin-bottom: 0.2rem; }
+.warn b { color: var(--warn); }
+.note p, .warn p { margin: 0.25rem 0; }
+
+/* 表 */
+.table { overflow-x: auto; margin: 1rem 0 1.5rem; }
+table { border-collapse: collapse; width: 100%; font-size: 0.92rem; background: var(--surface); }
+th, td { border: 1px solid var(--line); padding: 0.45rem 0.7rem; text-align: left; vertical-align: top; }
+th { background: var(--bg); font-weight: 700; white-space: nowrap; }
+td.num { font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+dl.terms { display: grid; grid-template-columns: 1fr; gap: 0.1rem 1.25rem; margin: 1rem 0; }
+@media (min-width: 640px) { dl.terms { grid-template-columns: 9.5rem minmax(0, 1fr); } }
+dl.terms dt { font-weight: 700; padding-top: 0.5rem; }
+dl.terms dd { margin: 0; padding: 0.5rem 0 0.5rem; border-bottom: 1px solid var(--line); min-width: 0; }
+@media (min-width: 640px) { dl.terms dt { border-bottom: 1px solid var(--line); } }
+
+figure.diagram { margin: 1.5rem 0; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 1rem; overflow-x: auto; }
+figure.diagram svg { display: block; width: 100%; min-width: 34rem; height: auto; }
+figure.diagram figcaption { font-size: 0.85rem; color: var(--muted); margin-top: 0.5rem; }
+.d-box { fill: var(--bg); stroke: var(--line); stroke-width: 1.5; }
+.d-cf { fill: var(--accent-soft); stroke: var(--accent); stroke-width: 1.5; stroke-dasharray: 6 4; }
+.d-strong { fill: var(--surface); stroke: var(--accent); stroke-width: 1.5; }
+.d-text { fill: var(--fg); font-family: var(--font-body); font-size: 14px; }
+.d-small { fill: var(--muted); font-family: var(--font-body); font-size: 12px; }
+.d-title { fill: var(--accent); font-family: var(--font-head); font-size: 14px; font-weight: 700; }
+.d-line { stroke: var(--muted); stroke-width: 1.5; fill: none; }
+.d-arrow { fill: var(--muted); }
+
+footer.page { margin-top: 4rem; font-size: 0.85rem; color: var(--muted); }
+@media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto !important; } }
+html { scroll-behavior: smooth; }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+<nav class="toc" aria-label="目次">
+  <p>目次</p>
+  <ol>
+    <li><a href="#intro">はじめに</a></li>
+    <li><a href="#prepare">0. 準備</a></li>
+    <li><a href="#overview">1. 全体像と用語</a></li>
+    <li><a href="#step-a">2. ハンズオンA：Pagesで公開する</a></li>
+    <li class="sub"><a href="#a-local">ローカルで表示する</a></li>
+    <li class="sub"><a href="#a-deploy">Git連携でデプロイする</a></li>
+    <li class="sub"><a href="#a-preview">プレビューを確かめる</a></li>
+    <li class="sub"><a href="#a-rollback">ロールバックする</a></li>
+    <li class="sub"><a href="#a-files">_redirectsと_headers</a></li>
+    <li><a href="#step-b">3. ハンズオンB：Workersに移す</a></li>
+    <li class="sub"><a href="#b-config">wrangler.jsoncを読む</a></li>
+    <li class="sub"><a href="#b-cli">コマンドでデプロイする</a></li>
+    <li class="sub"><a href="#b-builds">Workers Buildsで連携する</a></li>
+    <li class="sub"><a href="#b-map">Pagesとの対応表</a></li>
+    <li><a href="#step-c">4. ハンズオンC：掲示板にする</a></li>
+    <li class="sub"><a href="#c-code">コードを読む</a></li>
+    <li class="sub"><a href="#c-local">ローカルで動かす</a></li>
+    <li class="sub"><a href="#c-remote">本番のD1を作る</a></li>
+    <li class="sub"><a href="#c-secret">環境変数とSecret</a></li>
+    <li><a href="#domain">5. 独自ドメインの設定方法</a></li>
+    <li><a href="#choose">6. PagesとWorkersの選び方</a></li>
+    <li><a href="#limits">7. 無料枠と制限</a></li>
+    <li><a href="#trouble">8. よくあるエラーと対処</a></li>
+    <li><a href="#next">9. 次に読むもの</a></li>
+  </ol>
+  <p class="progress" id="progress" aria-live="polite"></p>
+</nav>
+
+<main>
+<header>
+  <p class="eyebrow">CLOUDFLARE HANDS-ON</p>
+  <h1>Cloudflareハンズオン：PagesとWorkersで掲示板を公開する</h1>
+  <p class="lead">小さな「ひとこと掲示板」を作りながら、Cloudflare PagesとWorkersでWebサイトを公開する流れを一通り体験します。すべて無料プランの範囲で進められます。</p>
+</header>
+
+<h2 id="intro">はじめに</h2>
+<p>この資料は説明会のあとに各自で進めるためのものです。上から順に進めれば、最後には投稿を保存できる掲示板がインターネットに公開されます。</p>
+<p>フロントエンドの知識は前提にしていません。HTMLを少し読めて、Gitでcommitとpushができれば進められます。</p>
+
+<div class="steps">
+  <div class="step-card"><b>A. Pagesで公開する</b><span>静的なページをGitHubと連携して公開し、プレビューとロールバックを試す</span><span class="branch">step-a</span></div>
+  <div class="step-card"><b>B. Workersに移す</b><span>同じサイトをWorkersで公開し直し、設定ファイルとコマンドに慣れる</span><span class="branch">step-b</span></div>
+  <div class="step-card"><b>C. 掲示板にする</b><span>投稿APIを書き、投稿をD1（データベース）に保存する</span><span class="branch">step-c</span></div>
+</div>
+
+<p>配布するリポジトリには、段階ごとにブランチ（<code>step-a</code>、<code>step-b</code>、<code>step-c</code>）があります。途中でつまずいたら、次の段階のブランチに切り替えれば続きから始められます。</p>
+
+<div class="note">
+  <b>この資料の読み方</b>
+  <p>黒い枠はターミナルで打つコマンドです。右上の「コピー」で写せます。緑の枠の「成功したときの見た目」を開くと、手元で実行したときの出力の例を確かめられます。</p>
+  <p>画面の項目名は<span class="ui">このように</span>表しています。Cloudflareの画面は変わることがあるので、表記が少し違うときは近い名前の項目を探してください。</p>
+</div>
+
+<h2 id="prepare">0. 準備</h2>
+<p>次のものを用意します。</p>
+<div class="table"><table>
+  <thead><tr><th>用意するもの</th><th>メモ</th></tr></thead>
+  <tbody>
+    <tr><td>Cloudflareのアカウント</td><td><a href="https://dash.cloudflare.com/sign-up">dash.cloudflare.com/sign-up</a>で無料で作れます。支払い方法の登録は要りません。</td></tr>
+    <tr><td>GitHubのアカウント</td><td>自分のリポジトリを作れるもの</td></tr>
+    <tr><td>Node.js</td><td>バージョン22.23.4以上（LTSのバージョンを推奨）。<code>node -v</code>で確かめます。</td></tr>
+    <tr><td>Git</td><td><code>git --version</code>で確かめます。</td></tr>
+    <tr><td>エディター</td><td>VS Codeなど。拡張機能「Astro」を入れると<code>.astro</code>ファイルに色が付きます。</td></tr>
+  </tbody>
+</table></div>
+
+<h3>リポジトリを用意する</h3>
+<p>配布したリポジトリを手元に持ってきて、自分のGitHubに新しく作った空のリポジトリへpushします。以降はこの自分のリポジトリをCloudflareに連携します。</p>
+<ol class="do">
+  <li>GitHubで空のリポジトリを作ります（名前は<code>cloudflare-handson</code>など。READMEは作らない）。</li>
+  <li>配布したリポジトリをcloneし、段階Aのブランチを自分のリポジトリの<code>main</code>としてpushします。
+    <div class="code"><pre><code>git clone &lt;配布したリポジトリのURL&gt; cloudflare-handson
+cd cloudflare-handson
+git checkout step-a
+git remote rename origin upstream
+git remote add origin &lt;自分のリポジトリのURL&gt;
+git push -u origin step-a:main</code></pre></div>
+  </li>
+  <li>依存するパッケージを入れます。
+    <div class="code"><pre><code>npm install</code></pre></div>
+  </li>
+</ol>
+<label class="done-check"><input type="checkbox" data-done="prepare" id="done-prepare">準備が終わった</label>
+
+<h2 id="overview">1. 全体像と用語</h2>
+<p>Cloudflareは世界中にあるデータセンターのネットワークの上でサービスを動かしています。ユーザーのアクセスは近くのデータセンターが受け取り、そこで静的なファイルを返したり、プログラムを動かしたりします。自分でサーバーを用意したり管理したりする必要はありません。</p>
+
+<figure class="diagram">
+<svg viewBox="0 0 720 300" role="img" aria-labelledby="dg-title">
+  <title id="dg-title">ブラウザからのリクエストが、Cloudflareのネットワーク上で静的ファイルかWorkerに振り分けられ、WorkerがD1を読み書きする図</title>
+  <defs><marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="d-arrow"/></marker></defs>
+  <rect x="10" y="115" width="120" height="60" rx="8" class="d-box"/>
+  <text x="70" y="150" text-anchor="middle" class="d-text">ブラウザ</text>
+  <rect x="170" y="20" width="540" height="260" rx="12" class="d-cf"/>
+  <text x="190" y="46" class="d-title">Cloudflareのネットワーク</text>
+  <rect x="200" y="110" width="140" height="70" rx="8" class="d-strong"/>
+  <text x="270" y="140" text-anchor="middle" class="d-text">URLで振り分け</text>
+  <text x="270" y="162" text-anchor="middle" class="d-small">/api/*かどうか</text>
+  <rect x="400" y="62" width="150" height="64" rx="8" class="d-strong"/>
+  <text x="475" y="90" text-anchor="middle" class="d-text">静的ファイル</text>
+  <text x="475" y="110" text-anchor="middle" class="d-small">HTML・CSS・画像</text>
+  <rect x="400" y="170" width="150" height="64" rx="8" class="d-strong"/>
+  <text x="475" y="198" text-anchor="middle" class="d-text">Worker</text>
+  <text x="475" y="218" text-anchor="middle" class="d-small">自分で書いたコード</text>
+  <rect x="590" y="170" width="100" height="64" rx="8" class="d-strong"/>
+  <text x="640" y="198" text-anchor="middle" class="d-text">D1</text>
+  <text x="640" y="218" text-anchor="middle" class="d-small">データベース</text>
+  <path d="M130 145 H196" class="d-line" marker-end="url(#arr)"/>
+  <path d="M340 135 C370 135 370 94 396 94" class="d-line" marker-end="url(#arr)"/>
+  <path d="M340 155 C370 155 370 202 396 202" class="d-line" marker-end="url(#arr)"/>
+  <path d="M550 202 H586" class="d-line" marker-end="url(#arr)"/>
+  <text x="372" y="82" text-anchor="middle" class="d-small">ほかのURL</text>
+  <text x="372" y="226" text-anchor="middle" class="d-small">/api/*</text>
+</svg>
+<figcaption>段階Cで作る掲示板の構成。段階AとBでは、静的ファイルだけを返します。</figcaption>
+</figure>
+
+<p>この資料で出てくる用語です。</p>
+<dl class="terms">
+  <dt>Pages</dt><dd>静的なWebサイトを公開するサービス。GitHubにpushすると、自動でビルドして公開します。</dd>
+  <dt>Workers</dt><dd>Cloudflareのネットワーク上でJavaScriptやTypeScriptのコードを動かすサービス。静的なファイルの公開（Static Assets）もできます。Cloudflareは新しく作るプロジェクトにはWorkersを勧めています。</dd>
+  <dt>Static Assets</dt><dd>WorkersでHTML、CSS、画像などのファイルをそのまま返す機能。静的ファイルへのリクエストは無料です。</dd>
+  <dt>D1</dt><dd>Cloudflareが提供するデータベース。SQLiteと同じSQLで読み書きします。</dd>
+  <dt>binding</dt><dd>WorkerのコードからD1などの資源を使うための名前。設定ファイルで<code>DB</code>と名付けると、コードから<code>env.DB</code>で使えます。</dd>
+  <dt>wrangler</dt><dd>Workers、Pages、D1を操作するコマンドラインツール。<code>npx wrangler ...</code>で実行します。</dd>
+  <dt>デプロイ</dt><dd>作ったものをインターネットに公開すること。</dd>
+  <dt>プレビュー</dt><dd>本番とは別のURLで、変更を公開前に確かめる仕組み。</dd>
+  <dt>ロールバック</dt><dd>公開中のものを、以前に公開したものへ戻すこと。</dd>
+  <dt>Astro</dt><dd>Webサイトを作るためのツール。<code>.astro</code>ファイルはほぼHTMLのまま書けて、<code>npm run build</code>で公開用のHTMLを<code>dist/</code>に出力します。</dd>
+</dl>
+
+<h2 id="step-a">2. ハンズオンA：Pagesで公開する</h2>
+<p>ブランチ<span class="branch">step-a</span>の内容を、Cloudflare Pagesで公開します。目安は30分です。</p>
+
+<h3 id="a-local">ローカルで表示する</h3>
+<ol class="do">
+  <li>開発用のサーバーを起動します。
+    <div class="code"><pre><code>npm run dev</code></pre></div>
+  </li>
+  <li>ブラウザで<code>http://localhost:4321</code>を開き、「ひとこと掲示板」と2件の投稿が表示されることを確かめます。</li>
+  <li><code>src/pages/index.astro</code>の投稿の文を書き換えて保存すると、ブラウザの表示がすぐに変わります。確かめたら<kbd>Ctrl</kbd>+<kbd>C</kbd>でサーバーを止めます。</li>
+</ol>
+
+<p>ファイルの構成は次のとおりです。触るのは主に<code>src/pages/</code>と<code>public/</code>です。</p>
+<div class="code"><span class="label">ファイルの構成</span><pre><code>src/pages/index.astro     <span class="c"># トップページ（/）</span>
+src/pages/about.astro     <span class="c"># /aboutのページ</span>
+src/pages/404.astro       <span class="c"># 見つからないときのページ</span>
+src/layouts/Layout.astro  <span class="c"># 全ページで共通の枠（ヘッダーとフッター）</span>
+public/                   <span class="c"># 加工せずに公開するファイル（CSS、_headers、_redirects）</span></code></pre></div>
+
+<p><code>.astro</code>ファイルは<code>---</code>で囲んだ部分にJavaScriptを書き、その下にHTMLを書きます。<code>{ }</code>の中に書いた値がHTMLに埋め込まれます。</p>
+<div class="code"><span class="label">src/pages/index.astro（抜粋）</span><pre><code>---
+const posts = [
+  { name: 'さくら', message: 'はじめまして！', createdAt: '2026-11-01 10:00' },
+];
+---
+&lt;ul class="posts"&gt;
+  {posts.map((post) =&gt; (
+    &lt;li&gt;&lt;p class="message"&gt;{post.message}&lt;/p&gt;&lt;/li&gt;
+  ))}
+&lt;/ul&gt;</code></pre></div>
+
+<p>公開用のファイルを作るには<code>npm run build</code>を実行します。<code>dist/</code>にHTMLが出力され、Cloudflareにはこの<code>dist/</code>を公開してもらいます。</p>
+<div class="code"><pre><code>npm run build</code></pre></div>
+<details class="result"><summary>成功したときの見た目</summary><div class="inner"><pre>generating static routes
+  ├─ /404.html (+6ms)
+  ├─ /about/index.html (+2ms)
+  ├─ /index.html (+1ms)
+✓ Completed in 16ms.
+
+[build] ✓ Completed in 197ms.
+[build] 3 page(s) built in 252ms
+[build] Complete!</pre></div></details>
+
+<h3 id="a-deploy">Git連携でデプロイする</h3>
+<ol class="do">
+  <li><a href="https://dash.cloudflare.com/">Cloudflareのダッシュボード</a>を開き、左のメニューから<span class="ui">Workers &amp; Pages</span>を選びます。</li>
+  <li><span class="ui">Create application</span>を押し、<span class="ui">Pages</span>のタブで<span class="ui">Connect to Git</span>を選びます。Workersの作成画面が先に出るので、Pagesのタブを探してください。</li>
+  <li><span class="ui">GitHub</span>を選んで<span class="ui">Install &amp; Authorize</span>で連携を許可し、準備で作った自分のリポジトリを選んで<span class="ui">Begin setup</span>を押します。</li>
+  <li><span class="ui">Project name</span>にはハンズオンBで作るWorkerと別の名前（<code>cloudflare-handson-pages</code>など）を入れます。この名前が<code>pages.dev</code>のURLになります。</li>
+  <li>ビルドの設定を次のように入れます。<span class="ui">Framework preset</span>で<span class="ui">Astro</span>を選ぶと、残りは自動で入ります。
+    <div class="table"><table>
+      <thead><tr><th>項目</th><th>値</th></tr></thead>
+      <tbody>
+        <tr><td>Production branch</td><td><code>main</code></td></tr>
+        <tr><td>Build command</td><td><code>npm run build</code></td></tr>
+        <tr><td>Build output directory</td><td><code>dist</code></td></tr>
+      </tbody>
+    </table></div>
+  </li>
+  <li><span class="ui">Save and Deploy</span>を押すと、ビルドが始まります。ログが流れ、数分で終わります。</li>
+  <li>表示された<code>https://&lt;プロジェクト名&gt;.pages.dev</code>を開き、手元と同じページが表示されることを確かめます。</li>
+</ol>
+<p>リポジトリの<code>.node-version</code>には<code>24</code>と書いてあり、Cloudflareのビルド環境はこのバージョンのNode.jsを使います。Astroは古いNode.jsではビルドを止めるので、このファイルは消さないでください。</p>
+<div class="note"><b>これで何が起きるようになったか</b><p>これ以降、<code>main</code>ブランチにpushするたびに、Cloudflareが自動でビルドして公開し直します。</p></div>
+<label class="done-check"><input type="checkbox" data-done="a-deploy" id="done-a-deploy">Pagesで公開できた</label>
+
+<h3 id="a-preview">プレビューを確かめる</h3>
+<p><code>main</code>以外のブランチにpushすると、本番とは別のURLでプレビューが公開されます。変更を本番に出す前に、ほかの人に見てもらうときに使います。</p>
+<ol class="do">
+  <li>ブランチを作り、トップページの説明文を書き換えてpushします。
+    <div class="code"><pre><code>git switch -c change-lead
+<span class="c"># src/pages/index.astroの「ひとことを残していってください。」を好きな文に変える</span>
+git commit -am "トップページの説明文を変える"
+git push -u origin change-lead</code></pre></div>
+  </li>
+  <li>ダッシュボードでプロジェクトを開き、<span class="ui">Deployments</span>に<code>change-lead</code>のプレビューが出ることを確かめます。</li>
+  <li>プレビューのURL（<code>https://change-lead.&lt;プロジェクト名&gt;.pages.dev</code>）を開くと変更後のページが見え、本番のURLは変わっていないことを確かめます。</li>
+  <li>GitHubでPull Requestを作ると、そのブランチのプレビューが作られ、pushするたびに更新されます。確かめたらマージして、本番に反映されることも見てみましょう。</li>
+</ol>
+
+<div class="warn"><b>プレビューは誰でも見られる</b><p>プレビューのURLは、初期の設定では公開されていて、URLを知っていれば誰でも開けます。検索エンジンには載らないよう、<code>X-Robots-Tag: noindex</code>のヘッダーが付きます。</p></div>
+
+<h3 id="a-rollback">ロールバックする</h3>
+<p>本番に出したあとで問題に気づいたときは、以前に公開したものへすぐに戻せます。ビルドをやり直さずに、公開済みのファイルに切り替えるだけなので、すぐに反映されます。</p>
+<ol class="do">
+  <li>わざと見出しを崩した変更を<code>main</code>にpushします。
+    <div class="code"><pre><code>git switch main
+git pull
+<span class="c"># src/pages/index.astroの&lt;h1&gt;を「こわれた掲示板」などに変える</span>
+git commit -am "わざと見出しを崩す"
+git push</code></pre></div>
+  </li>
+  <li>本番のURLで、見出しが変わったことを確かめます。</li>
+  <li>ダッシュボードの<span class="ui">Deployments</span>で、1つ前の本番のデプロイの右にある<span class="ui">…</span>から<span class="ui">Rollback to this deployment</span>を選びます。</li>
+  <li>本番のURLを開き直し、見出しが元に戻ったことを確かめます。</li>
+</ol>
+<div class="warn"><b>ロールバックしてもGitは戻らない</b><p>ロールバックで戻るのは公開中のファイルだけで、リポジトリの<code>main</code>には崩した変更が残ります。次にpushすると、また崩れたものが公開されます。<code>git revert HEAD</code>で変更を取り消してpushしておきましょう。</p></div>
+<label class="done-check"><input type="checkbox" data-done="a-rollback" id="done-a-rollback">プレビューとロールバックを試した</label>
+
+<h3 id="a-files">_redirectsと_headers</h3>
+<p><code>public/</code>に置いた2つのファイルで、転送とレスポンスヘッダーを設定しています。どちらもPagesとWorkersの両方で使えます。</p>
+<div class="code"><span class="label">public/_redirects</span><pre><code><span class="c"># 古いURLから新しいURLへ転送する（301は恒久的な転送）</span>
+/info /about 301</code></pre></div>
+<div class="code"><span class="label">public/_headers</span><pre><code><span class="c"># すべてのページに付けるセキュリティ用のヘッダー</span>
+/*
+  X-Content-Type-Options: nosniff
+  X-Frame-Options: DENY
+  Referrer-Policy: strict-origin-when-cross-origin
+
+<span class="c"># CSSは1時間キャッシュさせる</span>
+/style.css
+  Cache-Control: public, max-age=3600</code></pre></div>
+<p>公開したサイトで確かめます。<code>/info</code>を開くと<code>/about</code>に移り、ヘッダーはcurlで見られます。</p>
+<div class="code"><pre><code>curl -I https://&lt;プロジェクト名&gt;.pages.dev/info
+curl -I https://&lt;プロジェクト名&gt;.pages.dev/</code></pre></div>
+<details class="result"><summary>成功したときの見た目</summary><div class="inner">
+<p>手元で<code>npx wrangler pages dev dist</code>を実行し、同じことを確かめたときの出力です。</p>
+<pre>HTTP/1.1 301 Moved Permanently
+Location: /about
+
+HTTP/1.1 200 OK
+Content-Type: text/html; charset=utf-8
+referrer-policy: strict-origin-when-cross-origin
+x-content-type-options: nosniff
+x-frame-options: DENY</pre></div></details>
+
+<h2 id="step-b">3. ハンズオンB：Workersに移す</h2>
+<p>同じサイトを、今度はWorkersで公開します。目安は20分です。PagesとWorkersでは、同じことを設定ファイルとコマンドで行う点が違います。</p>
+<ol class="do">
+  <li>段階Bの内容を自分の<code>main</code>に取り込みます。
+    <div class="code"><pre><code>git fetch upstream
+git switch main
+git merge upstream/step-b
+npm install</code></pre></div>
+  </li>
+  <li>pushする前に、Pagesの自動デプロイを止めます。ダッシュボードでPagesのプロジェクトを開き、<span class="ui">Settings</span>の<span class="ui">Builds &amp; deployments</span>で<span class="ui">Configure Production deployments</span>を開き、<span class="ui">Enable automatic production branch deployments</span>のチェックを外して保存します。ハンズオンが終わったら、Pagesのプロジェクトは削除してかまいません。</li>
+</ol>
+
+<h3 id="b-config">wrangler.jsoncを読む</h3>
+<p>段階Bで増えたのは、Workersの設定ファイル<code>wrangler.jsonc</code>です。Pagesで画面に入れていた設定を、ここに書きます。</p>
+<div class="code"><span class="label">wrangler.jsonc</span><pre><code>{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  <span class="c">// Workerの名前。公開URL（&lt;name&gt;.&lt;サブドメイン&gt;.workers.dev）に使われる</span>
+  "name": "cloudflare-handson",
+  <span class="c">// Workersの実行環境の挙動を、この日付の時点のものに固定する</span>
+  "compatibility_date": "2026-11-16",
+  "assets": {
+    <span class="c">// astro buildの出力先をそのまま公開する</span>
+    "directory": "./dist",
+    <span class="c">// 存在しないURLにはdist/404.htmlを返す</span>
+    "not_found_handling": "404-page"
+  },
+  <span class="c">// バージョンごとのプレビューURLを有効にする</span>
+  "preview_urls": true
+}</code></pre></div>
+<p><code>name</code>は公開URLの一部になります。ほかの人と同じアカウントを使うときは、<code>cloudflare-handson-自分の名前</code>のように変えてください。</p>
+
+<p>まず手元で動かします。<code>npm run preview</code>はビルドしたあと、Workersと同じ動きをするローカルのサーバーを起動します。</p>
+<div class="code"><pre><code>npm run preview</code></pre></div>
+<details class="result"><summary>成功したときの見た目</summary><div class="inner"><pre> ⛅️ wrangler 4.163.0
+────────────────────
+⎔ Starting local server...
+[wrangler:info] ✨ Parsed 1 valid redirect rule.
+[wrangler:info] ✨ Parsed 2 valid header rules.
+[wrangler:info] Ready on http://localhost:8787</pre>
+<p><code>http://localhost:8787</code>を開くと、ハンズオンAと同じページが表示されます。<code>_redirects</code>と<code>_headers</code>が読み込まれていることも出力から分かります。</p></div></details>
+
+<h3 id="b-cli">コマンドでデプロイする</h3>
+<ol class="do">
+  <li>wranglerからCloudflareにログインします。ブラウザが開くので、<span class="ui">Allow</span>を押して許可します。
+    <div class="code"><pre><code>npx wrangler login</code></pre></div>
+  </li>
+  <li>デプロイします。
+    <div class="code"><pre><code>npm run deploy</code></pre></div>
+    <p>はじめてのときは、<code>workers.dev</code>のサブドメイン（<code>&lt;サブドメイン&gt;.workers.dev</code>の部分）を決めるよう求められることがあります。</p>
+  </li>
+  <li>出力の最後に表示される<code>https://cloudflare-handson.&lt;サブドメイン&gt;.workers.dev</code>を開き、同じページが表示されることを確かめます。</li>
+</ol>
+<details class="result"><summary>成功したときの見た目（デプロイの前に確かめるdry-runの出力）</summary><div class="inner">
+<p><code>npx wrangler deploy --dry-run</code>を実行すると、アップロードはせずに、何が送られるかだけを表示します。</p>
+<pre>✨ Read 9 files from the assets directory .../cloudflare-handson/dist
+Total Upload: 0.31 KiB / gzip: 0.22 KiB
+No bindings found.
+--dry-run: exiting now.</pre></div></details>
+
+<h3 id="b-builds">Workers Buildsで連携する</h3>
+<p>コマンドでのデプロイに加えて、Pagesと同じようにGitHubへのpushで自動デプロイすることもできます。この機能をWorkers Buildsと呼びます。</p>
+<ol class="do">
+  <li>ダッシュボードの<span class="ui">Workers &amp; Pages</span>で、先ほどデプロイした<code>cloudflare-handson</code>を開きます。</li>
+  <li><span class="ui">Settings</span>の<span class="ui">Builds</span>で<span class="ui">Connect</span>を押し、GitHubのリポジトリを連携します。</li>
+  <li>ビルドの設定を次のように入れます。
+    <div class="table"><table>
+      <thead><tr><th>項目</th><th>値</th></tr></thead>
+      <tbody>
+        <tr><td>Git branch</td><td><code>main</code>（本番にするブランチ）</td></tr>
+        <tr><td>Build command</td><td><code>npm run build</code></td></tr>
+        <tr><td>Deploy command</td><td><code>npx wrangler deploy</code>（初めから入っている）</td></tr>
+      </tbody>
+    </table></div>
+  </li>
+  <li>設定を保存し、<code>git push</code>します。<span class="ui">Deployments</span>にビルドが出て、終わると本番に反映されます。</li>
+  <li><code>main</code>以外のブランチをpushすると、Deploy commandの代わりにPreview command（初めは<code>npx wrangler preview</code>）が動き、本番とは別のプレビューのURLが作られます。プレビューが作られないときは、設定画面で本番以外のブランチのビルドが有効になっているかを確かめてください。</li>
+</ol>
+<p>Workersでのロールバックはダッシュボードの<span class="ui">Deployments</span>で戻したいバージョンの<span class="ui">…</span>から<span class="ui">Rollback</span>を選ぶか、次のコマンドで行います。</p>
+<div class="code"><pre><code>npx wrangler rollback</code></pre></div>
+<label class="done-check"><input type="checkbox" data-done="b" id="done-b">Workersで公開できた</label>
+
+<h3 id="b-map">Pagesとの対応表</h3>
+<div class="table"><table>
+  <thead><tr><th>やりたいこと</th><th>Pages</th><th>Workers</th></tr></thead>
+  <tbody>
+    <tr><td>設定を書く場所</td><td>ダッシュボードの画面</td><td><code>wrangler.jsonc</code></td></tr>
+    <tr><td>公開するディレクトリ</td><td>Build output directory</td><td><code>assets.directory</code></td></tr>
+    <tr><td>GitHubとの連携</td><td>Pagesの標準の機能</td><td>Workers Builds</td></tr>
+    <tr><td>コマンドでのデプロイ</td><td><code>wrangler pages deploy dist</code></td><td><code>wrangler deploy</code></td></tr>
+    <tr><td>プレビュー</td><td>ブランチごとのURL</td><td>本番以外のブランチのビルド、バージョンごとのURL</td></tr>
+    <tr><td>ロールバック</td><td>ダッシュボード</td><td>ダッシュボード、<code>wrangler rollback</code></td></tr>
+    <tr><td>見つからないURL</td><td><code>404.html</code>を自動で使う</td><td><code>not_found_handling</code>で指定する</td></tr>
+    <tr><td>転送とヘッダー</td><td colspan="2"><code>_redirects</code>と<code>_headers</code>をどちらでも使える</td></tr>
+    <tr><td>サーバー側の処理</td><td>Pages Functions（<code>functions/</code>）</td><td>Workerのコード（<code>main</code>）</td></tr>
+  </tbody>
+</table></div>
+
+<h2 id="step-c">4. ハンズオンC：掲示板にする</h2>
+<p>投稿を受け取って保存するAPIを、Workerのコードで書きます。投稿はD1に保存します。目安は40分です。</p>
+<div class="code"><pre><code>git fetch upstream
+git switch main
+git merge upstream/step-c
+npm install</code></pre></div>
+<p>ハンズオンAで<code>src/pages/index.astro</code>を書き換えていると、マージで衝突します。そのときは、段階Cのファイルを採ってマージを終えます。</p>
+<div class="code"><pre><code>git checkout --theirs src/pages/index.astro
+git add src/pages/index.astro
+git commit --no-edit
+npm install</code></pre></div>
+
+<h3 id="c-code">コードを読む</h3>
+<p>段階Cでは、<code>wrangler.jsonc</code>に次の設定が増えました。</p>
+<div class="code"><span class="label">wrangler.jsonc（増えた部分）</span><pre><code><span class="c">// APIを処理するWorkerのコード</span>
+"main": "src/worker.ts",
+"assets": {
+  "directory": "./dist",
+  "binding": "ASSETS",
+  "not_found_handling": "404-page",
+  <span class="c">// /api/で始まるURLだけをWorkerのコードで処理する。ほかは静的ファイルを返す</span>
+  "run_worker_first": ["/api/*"]
+},
+<span class="c">// D1データベースとの接続。コードからは env.DBで使う</span>
+"d1_databases": [
+  { "binding": "DB", "database_name": "handson-db", "migrations_dir": "migrations" }
+],
+<span class="c">// 環境変数。秘密にしない値だけをここに書く</span>
+"vars": { "MAX_MESSAGE_LENGTH": "140" }</code></pre></div>
+<p>APIは<code>src/worker.ts</code>にあります。URLとメソッドを見て、3つの処理に振り分けています。</p>
+<div class="table"><table>
+  <thead><tr><th>リクエスト</th><th>処理</th></tr></thead>
+  <tbody>
+    <tr><td><code>GET /api/posts</code></td><td>新しい順に50件を返す</td></tr>
+    <tr><td><code>POST /api/posts</code></td><td>送られた名前とひとことを確かめ、D1に保存する</td></tr>
+    <tr><td><code>DELETE /api/posts/:id</code></td><td>正しいトークンが付いているときだけ、投稿を削除する</td></tr>
+  </tbody>
+</table></div>
+<div class="code"><span class="label">src/worker.ts（抜粋）</span><pre><code>async function listPosts(env: Env): Promise&lt;Response&gt; {
+  const { results } = await env.DB.prepare(
+    'SELECT id, name, message, created_at FROM posts ORDER BY id DESC LIMIT 50',
+  ).all&lt;Post&gt;();
+  return Response.json(results);
+}</code></pre></div>
+<p>テーブルを作るSQLは<code>migrations/0001_create_posts.sql</code>にあります。このようなファイルをマイグレーションと呼び、番号の順に1回ずつ実行されます。</p>
+<div class="code"><span class="label">migrations/0001_create_posts.sql</span><pre><code>CREATE TABLE posts (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  name TEXT NOT NULL,
+  message TEXT NOT NULL,
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);</code></pre></div>
+
+<h3 id="c-local">ローカルで動かす</h3>
+<ol class="do">
+  <li>ローカル用のSecretのファイルを作ります。<code>.dev.vars</code>はGitに入れません。
+    <div class="code"><pre><code>cp .dev.vars.example .dev.vars</code></pre></div>
+  </li>
+  <li>ローカルのD1にテーブルを作ります。
+    <div class="code"><pre><code>npx wrangler d1 migrations apply handson-db --local</code></pre></div>
+    <details class="result"><summary>成功したときの見た目</summary><div class="inner"><pre>🌀 Executing on local database handson-db (DB) from .wrangler/state/v3/d1:
+🌀 To execute on your remote database, add a --remote flag to your wrangler command.
+🚣 2 commands executed successfully.
+┌───────────────────────┬────────┐
+│ name                  │ status │
+├───────────────────────┼────────┤
+│ 0001_create_posts.sql │ ✅     │
+└───────────────────────┴────────┘</pre></div></details>
+  </li>
+  <li>サーバーを起動し、<code>http://localhost:8787</code>を開きます。フォームから投稿すると、一覧に表示されます。
+    <div class="code"><pre><code>npm run preview</code></pre></div>
+    <details class="result"><summary>成功したときの見た目</summary><div class="inner"><pre>Using secrets defined in .dev.vars
+Your Worker has access to the following bindings:
+Binding                                  Resource                  Mode
+env.DB (handson-db)                      D1 Database               local
+env.ASSETS                               Assets                    local
+env.MAX_MESSAGE_LENGTH ("140")           Environment Variable      local
+env.ADMIN_TOKEN ("(hidden)")             Environment Variable      local
+
+⎔ Starting local server...
+[wrangler:info] Ready on http://localhost:8787</pre></div></details>
+  </li>
+  <li>別のターミナルから、curlでAPIを直接呼んでみます。
+    <div class="code"><pre><code>curl http://localhost:8787/api/posts
+curl -X POST http://localhost:8787/api/posts \
+  -H 'Content-Type: application/json' \
+  -d '{"name":"さくら","message":"はじめまして！"}'
+curl -X DELETE http://localhost:8787/api/posts/1
+curl -X DELETE http://localhost:8787/api/posts/1 -H 'Authorization: Bearer local-dev-token'</code></pre></div>
+    <details class="result"><summary>成功したときの見た目</summary><div class="inner"><pre>[]
+{"id":1,"name":"さくら","message":"はじめまして！","created_at":"2026-11-17 09:55:24"}
+{"error":"削除する権限がありません"}
+（4つ目は何も表示されず、ステータスコード204が返ります）</pre></div></details>
+  </li>
+</ol>
+<div class="note"><b>npm run devではAPIが動かない</b><p><code>npm run dev</code>はAstroだけのサーバーなので、<code>/api/posts</code>は動きません。段階Cでは<code>npm run preview</code>を使ってください。</p></div>
+
+<h3 id="c-remote">本番のD1を作る</h3>
+<ol class="do">
+  <li>Cloudflare上にD1のデータベースを作ります。
+    <div class="code"><pre><code>npx wrangler d1 create handson-db</code></pre></div>
+  </li>
+  <li>出力に表示される<code>database_id</code>を、<code>wrangler.jsonc</code>の<code>d1_databases</code>に書き足します。
+    <div class="code"><pre><code>"d1_databases": [
+  {
+    "binding": "DB",
+    "database_name": "handson-db",
+    "database_id": "<span class="c">ここに表示されたIDを入れる</span>",
+    "migrations_dir": "migrations"
+  }
+],</code></pre></div>
+  </li>
+  <li>本番のD1にテーブルを作ります。<code>--local</code>の代わりに<code>--remote</code>を付けます。
+    <div class="code"><pre><code>npx wrangler d1 migrations apply handson-db --remote</code></pre></div>
+  </li>
+  <li>変更をcommitしてpushします。Workers Buildsを連携していれば自動でデプロイされます。連携していなければ<code>npm run deploy</code>を実行します。
+    <div class="code"><pre><code>git commit -am "D1のdatabase_idを設定する"
+git push</code></pre></div>
+  </li>
+  <li>公開したURLを開き、投稿できることを確かめます。ダッシュボードの<span class="ui">Storage &amp; Databases</span>の<span class="ui">D1</span>で<code>handson-db</code>を開くと、保存された行を見られます。</li>
+</ol>
+<div class="warn"><b>ローカルのDBと本番のDBは別のもの</b><p><code>--local</code>で作ったテーブルと投稿は、手元の<code>.wrangler/</code>にだけあります。本番には<code>--remote</code>で別にテーブルを作る必要があり、手元の投稿は本番に移りません。</p></div>
+
+<h3 id="c-secret">環境変数とSecret</h3>
+<p>Workerに渡す値は秘密にするかどうかで置き場所を分けます。</p>
+<div class="table"><table>
+  <thead><tr><th>種類</th><th>例</th><th>ローカル</th><th>本番</th></tr></thead>
+  <tbody>
+    <tr><td>環境変数</td><td><code>MAX_MESSAGE_LENGTH</code></td><td colspan="2"><code>wrangler.jsonc</code>の<code>vars</code>に書く（Gitに入る）</td></tr>
+    <tr><td>Secret</td><td><code>ADMIN_TOKEN</code></td><td><code>.dev.vars</code>に書く（Gitに入れない）</td><td><code>wrangler secret put</code>で登録する</td></tr>
+  </tbody>
+</table></div>
+<p>本番に削除用のトークンを登録します。入力を求められたら、推測されにくい文字列を入れます。</p>
+<div class="code"><pre><code>npx wrangler secret put ADMIN_TOKEN</code></pre></div>
+<p>登録した値はダッシュボードでも見られず、変えるときは登録し直します。試しに<code>vars</code>の<code>MAX_MESSAGE_LENGTH</code>を<code>"10"</code>に変えてデプロイし、長い投稿がはじかれることを確かめてみましょう。</p>
+<div class="note"><b>型の定義を作り直す</b><p><code>wrangler.jsonc</code>のbindingや<code>vars</code>を変えたら、<code>npx wrangler types</code>を実行して<code>worker-configuration.d.ts</code>を作り直します。エディターがコードの<code>env.DB</code>などを正しく補完するようになります。</p></div>
+<label class="done-check"><input type="checkbox" data-done="c" id="done-c">掲示板を公開できた</label>
+
+<h2 id="domain">5. 独自ドメインの設定方法</h2>
+<p>このハンズオンではドメインを買わず、<code>pages.dev</code>と<code>workers.dev</code>のURLで進めました。自分のドメインで公開するときの流れだけを紹介します。</p>
+<div class="table"><table>
+  <thead><tr><th></th><th>Pages</th><th>Workers</th></tr></thead>
+  <tbody>
+    <tr><td>設定する場所</td><td>プロジェクトの<span class="ui">Custom domains</span></td><td>Workerの<span class="ui">Settings</span>の<span class="ui">Domains &amp; Routes</span></td></tr>
+    <tr><td>DNSをCloudflareで管理している</td><td colspan="2">ドメイン名を入れるだけで、DNSのレコードと証明書が自動で作られる</td></tr>
+    <tr><td>DNSをほかの会社で管理している</td><td>DNSにCNAMEレコード（<code>&lt;プロジェクト名&gt;.pages.dev</code>宛て）を作れば使える</td><td>使えない。先にドメインのDNS（ネームサーバー）をCloudflareに移す</td></tr>
+  </tbody>
+</table></div>
+<p>DNSをCloudflareに移すには、ダッシュボードでドメインを追加し、表示された2つのネームサーバーを、ドメインを買った会社の管理画面で設定します。移す作業は無料プランでもできます。</p>
+
+<h2 id="choose">6. PagesとWorkersの選び方</h2>
+<p>Cloudflareは新しく作るプロジェクトにはWorkersを勧めています。Pagesの公式ドキュメントにも、新しいプロジェクトはWorkersで始めるよう書かれています。迷ったら次のように選んでください。</p>
+<ul>
+  <li>これから新しく作るなら、Workers（Static Assets）を選びます。静的ファイルの公開、プレビュー、ロールバック、D1などのbindingは、どちらでも使えます。</li>
+  <li>Cron Triggers（定期実行）、Durable Objects、Workers Logsなど、Workersにしかない機能があります。</li>
+  <li>DNSをCloudflareに移さずに独自ドメインを使いたいときは、Pagesを選びます。</li>
+  <li>すでにPagesで動いているサイトは、急いで移す必要はありません。Cloudflareは移行の手順を公開しています。</li>
+</ul>
+
+<h2 id="limits">7. 無料枠と制限</h2>
+<p>無料プランの主な上限です（2026年11月時点の公式ドキュメントによる）。上限は変わることがあるので、使う前に公式のページで確かめてください。</p>
+<div class="table"><table>
+  <thead><tr><th>サービス</th><th>項目</th><th>無料プランの上限</th></tr></thead>
+  <tbody>
+    <tr><td rowspan="4">Workers</td><td>リクエスト</td><td class="num">1日に100,000回（UTCの0時にリセット）</td></tr>
+    <tr><td>1リクエストのCPU時間</td><td class="num">10ミリ秒</td></tr>
+    <tr><td>静的ファイルへのリクエスト</td><td>無料（上の回数とは別）</td></tr>
+    <tr><td>静的ファイルの数と大きさ</td><td class="num">1バージョンに20,000ファイル、1ファイル25MiB</td></tr>
+    <tr><td rowspan="3">Pages</td><td>ビルド</td><td class="num">1か月に500回、同時に1つ、20分で打ち切り</td></tr>
+    <tr><td>ファイルの数と大きさ</td><td class="num">1サイトに20,000ファイル、1ファイル25MiB</td></tr>
+    <tr><td>Pages Functions</td><td>Workersのリクエストの回数に含まれる</td></tr>
+    <tr><td rowspan="4">D1</td><td>読み込んだ行</td><td class="num">1日に500万行</td></tr>
+    <tr><td>書き込んだ行</td><td class="num">1日に100,000行</td></tr>
+    <tr><td>保存できる容量</td><td class="num">全体で5GB、1つのデータベースで500MB</td></tr>
+    <tr><td>データベースの数</td><td class="num">10個</td></tr>
+  </tbody>
+</table></div>
+<p>無料プランで上限を超えても、料金はかかりません。Workersは上限を超えたリクエストにエラーを返し、D1は次の日（UTC）にリセットされるまでクエリが失敗します。</p>
+
+<h2 id="trouble">8. よくあるエラーと対処</h2>
+<div class="table"><table>
+  <thead><tr><th>起きたこと</th><th>原因と対処</th></tr></thead>
+  <tbody>
+    <tr><td><code>no such table: posts</code></td><td>そのDBにテーブルがありません。ローカルなら<code>--local</code>、本番なら<code>--remote</code>を付けて<code>wrangler d1 migrations apply</code>を実行します。</td></tr>
+    <tr><td><code>Address already in use</code>、ポートが使われている</td><td>ほかのサーバーが同じポートを使っています。そのサーバーを止めるか、<code>npx wrangler dev --port 8790</code>のように別のポートで起動します。</td></tr>
+    <tr><td><code>wrangler login</code>でブラウザが開かない（WSLなど）</td><td>ターミナルに表示されたURLを、手でブラウザに貼って開きます。</td></tr>
+    <tr><td>Pagesのビルドが失敗する</td><td>ビルドのログを開き、最初に出たエラーを読みます。手元で<code>npm run build</code>が通るか、Build output directoryが<code>dist</code>になっているかを確かめます。</td></tr>
+    <tr><td><code>Node.js vXX is not supported by Astro!</code>でビルドが失敗する</td><td>ビルド環境のNode.jsが古いと起きます。リポジトリの<code>.node-version</code>（中身は<code>24</code>）が消えていないかを確かめます。環境変数<code>NODE_VERSION</code>を設定しても直せます。Pagesでは<span class="ui">Settings</span>の<span class="ui">Environment variables</span>、Workersでは<span class="ui">Settings</span>の<span class="ui">Build</span>の<span class="ui">Build Variables and Secrets</span>で設定します。</td></tr>
+    <tr><td>投稿の削除が<code>401</code>になる</td><td><code>Authorization: Bearer &lt;トークン&gt;</code>のヘッダーがないか、値が違います。本番では<code>wrangler secret put ADMIN_TOKEN</code>で登録した値を使います。</td></tr>
+    <tr><td><code>npm run dev</code>で<code>/api/posts</code>が404になる</td><td>Astroだけのサーバーなので、APIは動きません。<code>npm run preview</code>を使います。</td></tr>
+    <tr><td>デプロイしたのに表示が変わらない</td><td>ブラウザのキャッシュが残っていることがあります。再読み込み（<kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>R</kbd>）するか、プライベートウィンドウで開きます。</td></tr>
+  </tbody>
+</table></div>
+
+<h2 id="next">9. 次に読むもの</h2>
+<ul>
+  <li><a href="https://developers.cloudflare.com/workers/static-assets/">Workers Static Assets</a>：静的ファイルの公開と、Workerのコードとの組み合わせ方</li>
+  <li><a href="https://developers.cloudflare.com/workers/static-assets/migration-guides/migrate-from-pages/">Migrate from Pages to Workers</a>：PagesからWorkersへの移行の手順と、機能の対応表</li>
+  <li><a href="https://developers.cloudflare.com/workers/ci-cd/builds/">Workers Builds</a>：GitHubとの連携とプレビュー</li>
+  <li><a href="https://developers.cloudflare.com/d1/get-started/">D1 Get started</a>：D1の基本の操作</li>
+  <li><a href="https://developers.cloudflare.com/workers/platform/limits/">Workers Limits</a>、<a href="https://developers.cloudflare.com/pages/platform/limits/">Pages Limits</a>、<a href="https://developers.cloudflare.com/d1/platform/pricing/">D1 Pricing</a>：無料枠と制限</li>
+  <li><a href="https://docs.astro.build/ja/getting-started/">Astroのドキュメント</a>：ページを増やしたり、見た目を変えたりするとき</li>
+</ul>
+
+<footer class="page">この資料は、Astro 7.4、wrangler 4.163で手順を確かめて作りました（2026年11月）。</footer>
+</main>
+</div>
+
+<script>
+(function () {
+  // コードの枠にコピーのボタンを付ける
+  document.querySelectorAll('.code').forEach(function (box) {
+    var pre = box.querySelector('pre');
+    if (!pre) return;
+    var btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'copy';
+    btn.textContent = 'コピー';
+    btn.addEventListener('click', function () {
+      var text = pre.innerText.split('\n').filter(function (line) { return !/^\s*#/.test(line); }).join('\n').trim();
+      function done(msg) { btn.textContent = msg; setTimeout(function () { btn.textContent = 'コピー'; }, 1500); }
+      try {
+        navigator.clipboard.writeText(text).then(function () { done('コピーしました'); }, function () { selectText(pre); done('選択しました'); });
+      } catch (e) { selectText(pre); done('選択しました'); }
+    });
+    box.appendChild(btn);
+  });
+  function selectText(el) {
+    var range = document.createRange();
+    range.selectNodeContents(el);
+    var sel = window.getSelection();
+    sel.removeAllRanges();
+    sel.addRange(range);
+  }
+
+  // 終わった段階のチェックを、このブラウザにだけ覚えておく
+  var KEY = 'cf-handson-done';
+  var state = {};
+  try { state = JSON.parse(localStorage.getItem(KEY) || '{}') || {}; } catch (e) { state = {}; }
+  var boxes = document.querySelectorAll('input[data-done]');
+  var progress = document.getElementById('progress');
+  function update() {
+    var n = 0;
+    boxes.forEach(function (b) { if (b.checked) n++; });
+    progress.textContent = '進み具合：' + n + ' / ' + boxes.length;
+  }
+  boxes.forEach(function (b) {
+    b.checked = !!state[b.dataset.done];
+    b.addEventListener('change', function () {
+      state[b.dataset.done] = b.checked;
+      try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) {}
+      update();
+    });
+  });
+  update();
+})();
+</script>
+</body>
+</html>
