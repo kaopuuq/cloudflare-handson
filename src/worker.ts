@@ -51,7 +51,8 @@ async function createPost(request: Request, env: Env): Promise<Response> {
 	if (name === '' || message === '') {
 		return Response.json({ error: '名前とひとことを入力してください' }, { status: 400 });
 	}
-	if (name.length > 20 || message.length > maxLength) {
+	// [...文字列].lengthにすると、絵文字も1文字として数えられる
+	if ([...name].length > 20 || [...message].length > maxLength) {
 		return Response.json(
 			{ error: `名前は20文字以内、ひとことは${maxLength}文字以内で入力してください` },
 			{ status: 400 },
