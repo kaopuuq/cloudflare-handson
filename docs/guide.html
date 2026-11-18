@@ -150,6 +150,8 @@ figure.diagram figcaption { font-size: 0.85rem; color: var(--muted); margin-top:
 .d-line { stroke: var(--muted); stroke-width: 1.5; fill: none; }
 .d-arrow { fill: var(--muted); }
 
+.here { display: inline-block; font-size: 0.72rem; font-weight: 700; color: var(--accent); background: var(--accent-soft); border-radius: 999px; padding: 0 0.5rem; line-height: 1.6; white-space: nowrap; vertical-align: 0.1em; }
+table.services td:first-child { font-weight: 700; min-width: 7.5em; }
 footer.page { margin-top: 4rem; font-size: 0.85rem; color: var(--muted); }
 @media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto !important; } }
 html { scroll-behavior: smooth; }
@@ -163,7 +165,10 @@ html { scroll-behavior: smooth; }
   <ol>
     <li><a href="#intro">はじめに</a></li>
     <li><a href="#prepare">0. 準備</a></li>
-    <li><a href="#overview">1. 全体像と用語</a></li>
+    <li><a href="#overview">1. Cloudflareでできること</a></li>
+    <li class="sub"><a href="#services">サービスの一覧</a></li>
+    <li class="sub"><a href="#pages-vs-workers">PagesとWorkersの違い</a></li>
+    <li class="sub"><a href="#terms">用語</a></li>
     <li><a href="#step-a">2. ハンズオンA：Pagesで公開する</a></li>
     <li class="sub"><a href="#a-local">ローカルで表示する</a></li>
     <li class="sub"><a href="#a-deploy">Git連携でデプロイする</a></li>
@@ -181,10 +186,9 @@ html { scroll-behavior: smooth; }
     <li class="sub"><a href="#c-remote">本番のD1を作る</a></li>
     <li class="sub"><a href="#c-secret">環境変数とSecret</a></li>
     <li><a href="#domain">5. 独自ドメインの設定方法</a></li>
-    <li><a href="#choose">6. PagesとWorkersの選び方</a></li>
-    <li><a href="#limits">7. 無料枠と制限</a></li>
-    <li><a href="#trouble">8. よくあるエラーと対処</a></li>
-    <li><a href="#next">9. 次に読むもの</a></li>
+    <li><a href="#limits">6. 無料枠と制限</a></li>
+    <li><a href="#trouble">7. よくあるエラーと対処</a></li>
+    <li><a href="#next">8. 次に読むもの</a></li>
   </ol>
   <p class="progress" id="progress" aria-live="polite"></p>
 </nav>
@@ -245,7 +249,10 @@ git push -u origin main</code></pre></div>
 </ol>
 <label class="done-check"><input type="checkbox" data-done="prepare" id="done-prepare">準備が終わった</label>
 
-<h2 id="overview">1. 全体像と用語</h2>
+<h2 id="overview">1. Cloudflareでできること</h2>
+<p>ハンズオンに入る前に、Cloudflareで何ができるのかと、このハンズオンで使うPagesとWorkersの違いを押さえておきます。</p>
+
+<h3 id="how">Cloudflareの仕組み</h3>
 <p>Cloudflareは世界中にあるデータセンターのネットワークの上でサービスを動かしています。ユーザーのアクセスは近くのデータセンターが受け取り、そこで静的なファイルを返したり、プログラムを動かしたりします。自分でサーバーを用意したり管理したりする必要はありません。</p>
 
 <figure class="diagram">
@@ -278,6 +285,45 @@ git push -u origin main</code></pre></div>
 <figcaption>段階Cで作る掲示板の構成。段階AとBでは、静的ファイルだけを返します。</figcaption>
 </figure>
 
+<h3 id="services">サービスの一覧</h3>
+<p>Cloudflareのサービスは数が多いので、やりたいことで分けて紹介します。<span class="here">ハンズオンで使う</span>の印が付いたものを、このあと実際に使います。</p>
+<div class="table"><table class="services">
+  <thead><tr><th>やりたいこと</th><th>主なサービス</th><th>できること</th></tr></thead>
+  <tbody>
+    <tr><td>Webサイトを公開する</td><td>Pages <span class="here">ハンズオンで使う</span><br>Workers（Static Assets） <span class="here">ハンズオンで使う</span></td><td>HTMLやCSSを置くだけで、世界中から速く開けるサイトを公開できる。</td></tr>
+    <tr><td>サーバー側の処理を動かす</td><td>Workers <span class="here">ハンズオンで使う</span></td><td>APIやフォームの処理を、サーバーを用意せずに動かせる。決まった時刻に処理を動かす（Cron Triggers）こともできる。</td></tr>
+    <tr><td>データを保存する</td><td>D1 <span class="here">ハンズオンで使う</span><br>KV、R2、Durable Objects</td><td>D1はSQLで読み書きするデータベース、KVはキーと値の組を保存する仕組み、R2は画像などのファイルの置き場（データの取り出しに料金がかからない）。Durable Objectsはチャットのように複数の人で状態を共有する処理に使う。</td></tr>
+    <tr><td>ドメインを管理する</td><td>DNS、Registrar</td><td>ドメインのDNSを管理し、HTTPSの証明書を自動で発行する。ドメインを買うこともできる。</td></tr>
+    <tr><td>サイトを速く、安全にする</td><td>CDN、DDoS対策、WAF、Turnstile</td><td>ページをキャッシュして速く返し、攻撃を防ぐ。Turnstileは画像を選ばせるような操作なしで人とボットを見分ける。</td></tr>
+    <tr><td>アクセスを制限する</td><td>Cloudflare Access</td><td>社内の人など、決めた人だけがサイトを開けるようにする。</td></tr>
+    <tr><td>AIを組み込む</td><td>Workers AI、AI Gateway、Vectorize</td><td>Workersから生成AIのモデルを呼び出せる。AIへのリクエストの記録や、文書の検索に使うデータの保存もできる。</td></tr>
+    <tr><td>そのほか</td><td>Web Analytics、Email Routing、Images、Stream</td><td>アクセス解析、独自ドメインのメールアドレスへのメールの転送、画像と動画の配信。</td></tr>
+  </tbody>
+</table></div>
+<p>ほとんどのサービスに無料プランか無料枠があります。料金と上限はサービスごとに違うので、使う前に公式ドキュメントで確かめてください。このハンズオンで使うものの上限は、<a href="#limits">6. 無料枠と制限</a>にまとめています。</p>
+
+<h3 id="pages-vs-workers">PagesとWorkersの違い</h3>
+<p>どちらもWebサイトを公開するのに使えて、できることの多くは重なっています。もとは、Pagesが静的なサイトを公開するためのサービス、Workersがコードを動かすためのサービスでした。いまはWorkersでも静的なファイルを公開でき、Cloudflareは新しく作るプロジェクトにはWorkersを勧めています。Pagesの公式ドキュメントにも、新しいプロジェクトはWorkersで始めるよう書かれています。</p>
+<div class="table"><table>
+  <thead><tr><th></th><th>Pages</th><th>Workers</th></tr></thead>
+  <tbody>
+    <tr><td>向いていること</td><td>静的なサイトを、Gitと連携して手軽に公開する</td><td>静的なサイトとサーバー側の処理を、1つにまとめて動かす</td></tr>
+    <tr><td>設定する場所</td><td>主にダッシュボードの画面</td><td>設定ファイル（<code>wrangler.jsonc</code>）</td></tr>
+    <tr><td>サーバー側の処理</td><td>Pages Functions（<code>functions/</code>に置く）</td><td>Workerのコード</td></tr>
+    <tr><td>どちらでもできること</td><td colspan="2">Gitとの連携、プレビュー、ロールバック、<code>_headers</code>と<code>_redirects</code>、D1・KV・R2の利用、Secret、独自ドメイン</td></tr>
+    <tr><td>Workersだけでできること</td><td colspan="2">定期実行（Cron Triggers）、Durable Objects、Workers Logs、新しいバージョンへの段階的な切り替え（Gradual Deployments）</td></tr>
+    <tr><td>Pagesだけでできること</td><td colspan="2">DNSをCloudflareに移さずに独自ドメインを使う</td></tr>
+  </tbody>
+</table></div>
+<p>迷ったら次のように選んでください。</p>
+<ul>
+  <li>これから新しく作るなら、Workersを選びます。</li>
+  <li>DNSをCloudflareに移さずに独自ドメインを使いたいときは、Pagesを選びます。</li>
+  <li>すでにPagesで動いているサイトは、急いで移す必要はありません。Cloudflareは移行の手順を公開しています。</li>
+</ul>
+<p>同じサイトを両方で公開すると違いが分かりやすいので、このハンズオンでは画面の操作で流れをつかみやすいPagesから始め、段階Bで同じサイトをWorkersに移します。</p>
+
+<h3 id="terms">用語</h3>
 <p>この資料で出てくる用語です。</p>
 <dl class="terms">
   <dt>Pages</dt><dd>静的なWebサイトを公開するサービス。GitHubにpushすると、自動でビルドして公開します。</dd>
@@ -667,16 +713,7 @@ git push</code></pre></div>
 </table></div>
 <p>DNSをCloudflareに移すには、ダッシュボードでドメインを追加し、表示された2つのネームサーバーを、ドメインを買った会社の管理画面で設定します。移す作業は無料プランでもできます。</p>
 
-<h2 id="choose">6. PagesとWorkersの選び方</h2>
-<p>Cloudflareは新しく作るプロジェクトにはWorkersを勧めています。Pagesの公式ドキュメントにも、新しいプロジェクトはWorkersで始めるよう書かれています。迷ったら次のように選んでください。</p>
-<ul>
-  <li>これから新しく作るなら、Workers（Static Assets）を選びます。静的ファイルの公開、プレビュー、ロールバック、D1などのbindingは、どちらでも使えます。</li>
-  <li>Cron Triggers（定期実行）、Durable Objects、Workers Logsなど、Workersにしかない機能があります。</li>
-  <li>DNSをCloudflareに移さずに独自ドメインを使いたいときは、Pagesを選びます。</li>
-  <li>すでにPagesで動いているサイトは、急いで移す必要はありません。Cloudflareは移行の手順を公開しています。</li>
-</ul>
-
-<h2 id="limits">7. 無料枠と制限</h2>
+<h2 id="limits">6. 無料枠と制限</h2>
 <p>無料プランの主な上限です（2026年11月時点の公式ドキュメントによる）。上限は変わることがあるので、使う前に公式のページで確かめてください。</p>
 <div class="table"><table>
   <thead><tr><th>サービス</th><th>項目</th><th>無料プランの上限</th></tr></thead>
@@ -696,7 +733,7 @@ git push</code></pre></div>
 </table></div>
 <p>無料プランで上限を超えても、料金はかかりません。Workersは上限を超えたリクエストにエラーを返し、D1は次の日（UTC）にリセットされるまでクエリが失敗します。</p>
 
-<h2 id="trouble">8. よくあるエラーと対処</h2>
+<h2 id="trouble">7. よくあるエラーと対処</h2>
 <div class="table"><table>
   <thead><tr><th>起きたこと</th><th>原因と対処</th></tr></thead>
   <tbody>
@@ -711,7 +748,7 @@ git push</code></pre></div>
   </tbody>
 </table></div>
 
-<h2 id="next">9. 次に読むもの</h2>
+<h2 id="next">8. 次に読むもの</h2>
 <ul>
   <li><a href="https://developers.cloudflare.com/workers/static-assets/">Workers Static Assets</a>：静的ファイルの公開と、Workerのコードとの組み合わせ方</li>
   <li><a href="https://developers.cloudflare.com/workers/static-assets/migration-guides/migrate-from-pages/">Migrate from Pages to Workers</a>：PagesからWorkersへの移行の手順と、機能の対応表</li>
