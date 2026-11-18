@@ -9,7 +9,7 @@ import Layout from '../layouts/Layout.astro';
 	<form id="post-form">
 		<label>
 			名前
-			<input name="name" maxlength="20" required />
+			<input name="name" required />
 		</label>
 		<label>
 			ひとこと
@@ -58,6 +58,11 @@ import Layout from '../layouts/Layout.astro';
 		const res = await fetch('/api/posts');
 		render(await res.json());
 	}
+
+	// 入力し直したら、前に出たエラーの文を消す
+	form.addEventListener('input', () => {
+		errorText.hidden = true;
+	});
 
 	form.addEventListener('submit', async (event) => {
 		event.preventDefault();
