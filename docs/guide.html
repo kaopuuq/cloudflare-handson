@@ -210,7 +210,14 @@ html { scroll-behavior: smooth; }
   <div class="step-card"><b>C. 掲示板にする</b><span>投稿APIを書き、投稿をD1（データベース）に保存する</span><span class="branch">step-c</span></div>
 </div>
 
-<p>配布するリポジトリには、段階ごとにブランチ（<code>step-a</code>、<code>step-b</code>、<code>step-c</code>）があります。途中でつまずいたら、次の段階のブランチに切り替えれば続きから始められます。</p>
+<p>配布するリポジトリには、段階ごとにブランチ（<code>step-a</code>、<code>step-b</code>、<code>step-c</code>）があります。途中でつまずいたら、次の段階のブランチの内容で自分の<code>main</code>を作り直せば、続きから始められます。</p>
+<details class="result"><summary>次の段階から始めるには</summary><div class="inner">
+<p>段階Bから始める例です。自分の<code>main</code>にある変更は消えるので、残したいものは先に別のブランチに分けておきます。<code>--force-with-lease</code>は、自分のリポジトリの<code>main</code>を強制的に上書きするための指定です。</p>
+<pre>git fetch upstream
+git switch main
+git reset --hard upstream/step-b
+git push --force-with-lease origin main
+npm install</pre></div></details>
 
 <div class="note">
   <b>この資料の読み方</b>
@@ -242,9 +249,12 @@ git remote rename origin upstream
 git remote add origin &lt;自分のリポジトリのURL&gt;
 git switch -C main upstream/step-a
 git push -u origin main</code></pre></div>
+    <p><code>git switch</code>のあとに<code>use "git pull" to update your local branch</code>と表示されますが、<code>git pull</code>は実行しないでください。次の<code>git push -u</code>で、自分のリポジトリを追うように切り替わります。</p>
+    <p>この資料は配布したリポジトリの<code>main</code>ブランチ（<code>docs/guide.html</code>）にあり、<code>git switch</code>で段階Aに切り替えると手元からはなくなります。このページか、GitHubのリポジトリで読んでください。</p>
   </li>
   <li>依存するパッケージを入れます。
     <div class="code"><pre><code>npm install</code></pre></div>
+    <p><code>vulnerabilities</code>（脆弱性）や<code>install-scripts</code>の警告が出ても、そのまま進めてかまいません。表示に出る<code>npm audit fix --force</code>は実行しないでください。Astroのバージョンが下がり、ビルドできなくなります。</p>
   </li>
 </ol>
 <label class="done-check"><input type="checkbox" data-done="prepare" id="done-prepare">準備が終わった</label>
@@ -347,7 +357,9 @@ git push -u origin main</code></pre></div>
     <div class="code"><pre><code>npm run dev</code></pre></div>
   </li>
   <li>ブラウザで<code>http://localhost:4321</code>を開き、「ひとこと掲示板」と2件の投稿が表示されることを確かめます。</li>
-  <li><code>src/pages/index.astro</code>の投稿の文を書き換えて保存すると、ブラウザの表示がすぐに変わります。確かめたら<kbd>Ctrl</kbd>+<kbd>C</kbd>でサーバーを止めます。</li>
+  <li><code>src/pages/index.astro</code>の投稿の文を書き換えて保存すると、ブラウザの表示がすぐに変わります。確かめたら<kbd>Ctrl</kbd>+<kbd>C</kbd>でサーバーを止め、書き換えたファイルを元に戻します。
+    <div class="code"><pre><code>git restore src/pages/index.astro</code></pre></div>
+  </li>
 </ol>
 
 <p>ファイルの構成は次のとおりです。触るのは主に<code>src/pages/</code>と<code>public/</code>です。</p>
@@ -407,10 +419,12 @@ const posts = [
 <h3 id="a-preview">プレビューを確かめる</h3>
 <p><code>main</code>以外のブランチにpushすると、本番とは別のURLでプレビューが公開されます。変更を本番に出す前に、ほかの人に見てもらうときに使います。</p>
 <ol class="do">
-  <li>ブランチを作り、トップページの説明文を書き換えてpushします。
-    <div class="code"><pre><code>git switch -c change-lead
-<span class="c"># src/pages/index.astroの「ひとことを残していってください。」を好きな文に変える</span>
-git commit -am "トップページの説明文を変える"
+  <li>プレビュー用のブランチを作ります。
+    <div class="code"><pre><code>git switch -c change-lead</code></pre></div>
+  </li>
+  <li>エディターで<code>src/pages/index.astro</code>を開き、「ひとことを残していってください。」を好きな文に書き換えて保存します。</li>
+  <li>commitしてpushします。
+    <div class="code"><pre><code>git commit -am "トップページの説明文を変える"
 git push -u origin change-lead</code></pre></div>
   </li>
   <li>ダッシュボードでプロジェクトを開き、<span class="ui">Deployments</span>に<code>change-lead</code>のプレビューが出ることを確かめます。</li>
@@ -423,18 +437,22 @@ git push -u origin change-lead</code></pre></div>
 <h3 id="a-rollback">ロールバックする</h3>
 <p>本番に出したあとで問題に気づいたときは、以前に公開したものへすぐに戻せます。ビルドをやり直さずに、公開済みのファイルに切り替えるだけなので、すぐに反映されます。</p>
 <ol class="do">
-  <li>わざと見出しを崩した変更を<code>main</code>にpushします。
+  <li><code>main</code>に戻り、プレビューでマージした変更を取り込みます。
     <div class="code"><pre><code>git switch main
-git pull
-<span class="c"># src/pages/index.astroの&lt;h1&gt;を「こわれた掲示板」などに変える</span>
-git commit -am "わざと見出しを崩す"
+git pull</code></pre></div>
+  </li>
+  <li>エディターで<code>src/pages/index.astro</code>を開き、<code>&lt;h1&gt;</code>の「ひとこと掲示板」を「こわれた掲示板」などに書き換えて保存します。</li>
+  <li>commitしてpushします。
+    <div class="code"><pre><code>git commit -am "わざと見出しを崩す"
 git push</code></pre></div>
   </li>
   <li>本番のURLで、見出しが変わったことを確かめます。</li>
   <li>ダッシュボードの<span class="ui">Deployments</span>で、1つ前の本番のデプロイの右にある<span class="ui">…</span>から<span class="ui">Rollback to this deployment</span>を選びます。</li>
   <li>本番のURLを開き直し、見出しが元に戻ったことを確かめます。</li>
 </ol>
-<div class="warn"><b>ロールバックしてもGitは戻らない</b><p>ロールバックで戻るのは公開中のファイルだけで、リポジトリの<code>main</code>には崩した変更が残ります。次にpushすると、また崩れたものが公開されます。<code>git revert HEAD</code>で変更を取り消してpushしておきましょう。</p></div>
+<div class="warn"><b>ロールバックしてもGitは戻らない</b><p>ロールバックで戻るのは公開中のファイルだけで、リポジトリの<code>main</code>には崩した変更が残ります。次にpushすると、また崩れたものが公開されます。次のコマンドで変更を取り消して、pushしておきましょう。</p>
+<div class="code"><pre><code>git revert --no-edit HEAD
+git push</code></pre></div></div>
 <label class="done-check"><input type="checkbox" data-done="a-rollback" id="done-a-rollback">プレビューとロールバックを試した</label>
 
 <h3 id="a-files">_redirectsと_headers</h3>
@@ -450,11 +468,12 @@ git push</code></pre></div>
 <span class="c"># CSSは1時間キャッシュさせる</span>
 /style.css
   Cache-Control: public, max-age=3600</code></pre></div>
+<p><code>_headers</code>が効くのは静的なファイルの応答だけです。段階Cで作るAPI（<code>/api/*</code>）の応答には付きません。</p>
 <p>公開したサイトで確かめます。<code>/info</code>を開くと<code>/about</code>に移り、ヘッダーはcurlで見られます。</p>
 <div class="code"><pre><code>curl -I https://&lt;プロジェクト名&gt;.pages.dev/info
 curl -I https://&lt;プロジェクト名&gt;.pages.dev/</code></pre></div>
 <details class="result"><summary>成功したときの見た目</summary><div class="inner">
-<p>手元で<code>npx wrangler pages dev dist</code>を実行し、同じことを確かめたときの出力です。</p>
+<p>手元で<code>npx wrangler pages dev dist</code>を実行し、同じことを確かめたときの出力です。段階Aにはwranglerが入っていないので、<code>Ok to proceed? (y)</code>と聞かれたら<kbd>y</kbd>を押します。</p>
 <pre>HTTP/1.1 301 Moved Permanently
 Location: /about
 
@@ -581,7 +600,6 @@ npm install</code></pre></div>
 "main": "src/worker.ts",
 "assets": {
   "directory": "./dist",
-  "binding": "ASSETS",
   "not_found_handling": "404-page",
   <span class="c">// /api/で始まるURLだけをWorkerのコードで処理する。ほかは静的ファイルを返す</span>
   "run_worker_first": ["/api/*"]
@@ -622,6 +640,7 @@ npm install</code></pre></div>
   </li>
   <li>ローカルのD1にテーブルを作ります。
     <div class="code"><pre><code>npx wrangler d1 migrations apply handson-db --local</code></pre></div>
+    <p><code>About to apply 1 migration(s)</code>と続けてよいかを聞かれたら、<kbd>y</kbd>か<kbd>Enter</kbd>を押します。</p>
     <details class="result"><summary>成功したときの見た目</summary><div class="inner"><pre>🌀 Executing on local database handson-db (DB) from .wrangler/state/v3/d1:
 🌀 To execute on your remote database, add a --remote flag to your wrangler command.
 🚣 2 commands executed successfully.
@@ -637,7 +656,6 @@ npm install</code></pre></div>
 Your Worker has access to the following bindings:
 Binding                                  Resource                  Mode
 env.DB (handson-db)                      D1 Database               local
-env.ASSETS                               Assets                    local
 env.MAX_MESSAGE_LENGTH ("140")           Environment Variable      local
 env.ADMIN_TOKEN ("(hidden)")             Environment Variable      local
 
@@ -649,12 +667,15 @@ env.ADMIN_TOKEN ("(hidden)")             Environment Variable      local
 curl -X POST http://localhost:8787/api/posts \
   -H 'Content-Type: application/json' \
   -d '{"name":"さくら","message":"はじめまして！"}'
-curl -X DELETE http://localhost:8787/api/posts/1
-curl -X DELETE http://localhost:8787/api/posts/1 -H 'Authorization: Bearer local-dev-token'</code></pre></div>
+curl -X DELETE http://localhost:8787/api/posts/1 -w '\n%{http_code}\n'
+curl -X DELETE http://localhost:8787/api/posts/1 -H 'Authorization: Bearer local-dev-token' -w '%{http_code}\n'</code></pre></div>
+    <p><code>-w '%{http_code}\n'</code>は、最後にステータスコードを表示させる指定です。</p>
     <details class="result"><summary>成功したときの見た目</summary><div class="inner"><pre>[]
-{"id":1,"name":"さくら","message":"はじめまして！","created_at":"2026-11-17 09:55:24"}
+{"id":1,"name":"さくら","message":"はじめまして！","created_at":"2026-11-18 07:12:18"}
 {"error":"削除する権限がありません"}
-（4つ目は何も表示されず、ステータスコード204が返ります）</pre></div></details>
+401
+204</pre>
+<p>トークンがないと<code>401</code>、正しいトークンを付けると本文なしで<code>204</code>が返り、投稿が削除されます。</p></div></details>
   </li>
 </ol>
 <div class="note"><b>npm run devではAPIが動かない</b><p><code>npm run dev</code>はAstroだけのサーバーなので、<code>/api/posts</code>は動きません。段階Cでは<code>npm run preview</code>を使ってください。</p></div>
@@ -697,8 +718,8 @@ git push</code></pre></div>
 </table></div>
 <p>本番に削除用のトークンを登録します。入力を求められたら、推測されにくい文字列を入れます。</p>
 <div class="code"><pre><code>npx wrangler secret put ADMIN_TOKEN</code></pre></div>
-<p>登録した値はダッシュボードでも見られず、変えるときは登録し直します。試しに<code>vars</code>の<code>MAX_MESSAGE_LENGTH</code>を<code>"10"</code>に変えてデプロイし、長い投稿がはじかれることを確かめてみましょう。</p>
-<div class="note"><b>型の定義を作り直す</b><p><code>wrangler.jsonc</code>のbindingや<code>vars</code>を変えたら、<code>npx wrangler types</code>を実行して<code>worker-configuration.d.ts</code>を作り直します。エディターがコードの<code>env.DB</code>などを正しく補完するようになります。</p></div>
+<p>登録した値はダッシュボードでも見られず、変えるときは登録し直します。試しに<code>vars</code>の<code>MAX_MESSAGE_LENGTH</code>を<code>"10"</code>に変えてデプロイし、11文字以上の投稿がはじかれることを確かめてみましょう。フォームには文字数の上限を設けていないので、上限を変えるのは<code>vars</code>だけで済みます。</p>
+<div class="note"><b>型の定義を作り直す</b><p><code>wrangler.jsonc</code>のbindingや<code>vars</code>を変えたら、<code>npx wrangler types</code>を実行して<code>worker-configuration.d.ts</code>を作り直します。エディターがコードの<code>env.DB</code>などを正しく補完するようになります。最後に<code>Install @types/node</code>と表示されることがありますが、このハンズオンでは入れなくてかまいません。</p></div>
 <label class="done-check"><input type="checkbox" data-done="c" id="done-c">掲示板を公開できた</label>
 
 <h2 id="domain">5. 独自ドメインの設定方法</h2>
@@ -738,7 +759,7 @@ git push</code></pre></div>
   <thead><tr><th>起きたこと</th><th>原因と対処</th></tr></thead>
   <tbody>
     <tr><td><code>no such table: posts</code></td><td>そのDBにテーブルがありません。ローカルなら<code>--local</code>、本番なら<code>--remote</code>を付けて<code>wrangler d1 migrations apply</code>を実行します。</td></tr>
-    <tr><td><code>Address already in use</code>、ポートが使われている</td><td>ほかのサーバーが同じポートを使っています。そのサーバーを止めるか、<code>npx wrangler dev --port 8790</code>のように別のポートで起動します。</td></tr>
+    <tr><td><code>Address already in use</code>、ポートが使われている</td><td>ほかのサーバーが同じポートを使っています。そのサーバーを止めるか、<code>npm run preview -- --port 8790</code>のように別のポートで起動します。<code>npm run preview</code>を通すと、ビルドしてから起動します。</td></tr>
     <tr><td><code>wrangler login</code>でブラウザが開かない（WSLなど）</td><td>ターミナルに表示されたURLを、手でブラウザに貼って開きます。</td></tr>
     <tr><td>Pagesのビルドが失敗する</td><td>ビルドのログを開き、最初に出たエラーを読みます。手元で<code>npm run build</code>が通るか、Build output directoryが<code>dist</code>になっているかを確かめます。</td></tr>
     <tr><td><code>Node.js vXX is not supported by Astro!</code>でビルドが失敗する</td><td>ビルド環境のNode.jsが古いと起きます。リポジトリの<code>.node-version</code>（中身は<code>24</code>）が消えていないかを確かめます。環境変数<code>NODE_VERSION</code>を設定しても直せます。Pagesでは<span class="ui">Settings</span>の<span class="ui">Environment variables</span>、Workersでは<span class="ui">Settings</span>の<span class="ui">Build</span>の<span class="ui">Build Variables and Secrets</span>で設定します。</td></tr>
