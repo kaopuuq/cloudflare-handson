@@ -1,6 +1,6 @@
 # ひとこと掲示板（Cloudflareハンズオン用）
 
-Cloudflare PagesとWorkersの使い方を学ぶためのデモです。手順はハンズオン資料（`docs/guide.html`）にまとめています。
+Cloudflare PagesとWorkersの使い方を学ぶためのデモです。手順はハンズオン資料（mainブランチの`docs/guide.html`）にまとめています。ブラウザで開いて読んでください。
 
 ## 段階
 | ブランチ | 内容 | 公開先 |
