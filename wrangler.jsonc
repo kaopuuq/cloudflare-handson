@@ -9,8 +9,6 @@
 	"assets": {
 		// astro buildの出力先をそのまま公開する
 		"directory": "./dist",
-		// Workerのコードから静的ファイルを返すときに使う名前（env.ASSETS）
-		"binding": "ASSETS",
 		// 存在しないURLにはdist/404.htmlを返す
 		"not_found_handling": "404-page",
 		// /api/で始まるURLだけをWorkerのコードで処理する。ほかは静的ファイルを返す
