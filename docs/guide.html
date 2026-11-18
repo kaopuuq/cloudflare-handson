@@ -111,11 +111,11 @@ details.result p { font-size: 0.9rem; margin: 0.5rem 0; }
 
 /* 手順 */
 ol.do { counter-reset: do; list-style: none; padding: 0; margin: 1rem 0; display: grid; gap: 0.25rem; }
-ol.do > li { counter-increment: do; position: relative; padding-left: 2.6rem; max-width: none; }
+ol.do > li { counter-increment: do; position: relative; padding-left: 2.6rem; max-width: none; min-width: 0; }
 ol.do > li::before { content: counter(do); position: absolute; left: 0; top: 0.1rem; width: 1.8rem; height: 1.8rem; border-radius: 50%; background: var(--accent); color: var(--surface); font-weight: 700; font-size: 0.9rem; display: grid; place-items: center; line-height: 1; }
 .done-check { display: inline-flex; align-items: center; gap: 0.4rem; font-size: 0.88rem; color: var(--muted); margin: 0.5rem 0 0; cursor: pointer; }
 .done-check input { width: 1.05rem; height: 1.05rem; accent-color: var(--accent); }
-.ui { font-weight: 700; background: var(--surface); border: 1px solid var(--line); border-radius: 4px; padding: 0 0.35rem; white-space: nowrap; }
+.ui { font-weight: 700; background: var(--surface); border: 1px solid var(--line); border-radius: 4px; padding: 0 0.35rem; overflow-wrap: anywhere; }
 
 /* 注意書き */
 .note, .warn { border-radius: 8px; padding: 0.75rem 1rem; margin: 1rem 0; font-size: 0.95rem; }
@@ -166,6 +166,7 @@ html { scroll-behavior: smooth; }
     <li><a href="#intro">はじめに</a></li>
     <li><a href="#prepare">0. 準備</a></li>
     <li><a href="#overview">1. Cloudflareでできること</a></li>
+    <li class="sub"><a href="#how">Cloudflareの仕組み</a></li>
     <li class="sub"><a href="#services">サービスの一覧</a></li>
     <li class="sub"><a href="#pages-vs-workers">PagesとWorkersの違い</a></li>
     <li class="sub"><a href="#terms">用語</a></li>
@@ -213,11 +214,13 @@ html { scroll-behavior: smooth; }
 <p>配布するリポジトリには、段階ごとにブランチ（<code>step-a</code>、<code>step-b</code>、<code>step-c</code>）があります。途中でつまずいたら、次の段階のブランチの内容で自分の<code>main</code>を作り直せば、続きから始められます。</p>
 <details class="result"><summary>次の段階から始めるには</summary><div class="inner">
 <p>段階Bから始める例です。自分の<code>main</code>にある変更は消えるので、残したいものは先に別のブランチに分けておきます。<code>--force-with-lease</code>は、自分のリポジトリの<code>main</code>を強制的に上書きするための指定です。</p>
-<pre>git fetch upstream
+<div class="code"><pre><code>git fetch upstream
+git fetch origin
 git switch main
 git reset --hard upstream/step-b
 git push --force-with-lease origin main
-npm install</pre></div></details>
+npm install</code></pre></div>
+<p><code>git fetch origin</code>を省くと、pushが<code>rejected</code>（<code>stale info</code>）で断られることがあります。そのときは<code>git fetch origin</code>を実行してから、pushをやり直します。</p></div></details>
 
 <div class="note">
   <b>この資料の読み方</b>
@@ -254,7 +257,7 @@ git push -u origin main</code></pre></div>
   </li>
   <li>依存するパッケージを入れます。
     <div class="code"><pre><code>npm install</code></pre></div>
-    <p><code>vulnerabilities</code>（脆弱性）や<code>install-scripts</code>の警告が出ても、そのまま進めてかまいません。表示に出る<code>npm audit fix --force</code>は実行しないでください。Astroのバージョンが下がり、ビルドできなくなります。</p>
+    <p><code>vulnerabilities</code>（脆弱性）や<code>install-scripts</code>の警告が出ても、そのまま進めてかまいません。表示に出る<code>npm audit fix --force</code>は実行しないでください。Astroのバージョンが7から5に下がり、この資料と違う構成になります。下がったAstroには別の脆弱性があり、警告もかえって増えます。</p>
   </li>
 </ol>
 <label class="done-check"><input type="checkbox" data-done="prepare" id="done-prepare">準備が終わった</label>
@@ -663,13 +666,13 @@ env.ADMIN_TOKEN ("(hidden)")             Environment Variable      local
 [wrangler:info] Ready on http://localhost:8787</pre></div></details>
   </li>
   <li>別のターミナルから、curlでAPIを直接呼んでみます。
-    <div class="code"><pre><code>curl http://localhost:8787/api/posts
+    <div class="code"><pre><code>curl http://localhost:8787/api/posts -w '\n'
 curl -X POST http://localhost:8787/api/posts \
   -H 'Content-Type: application/json' \
-  -d '{"name":"さくら","message":"はじめまして！"}'
+  -d '{"name":"さくら","message":"はじめまして！"}' -w '\n'
 curl -X DELETE http://localhost:8787/api/posts/1 -w '\n%{http_code}\n'
 curl -X DELETE http://localhost:8787/api/posts/1 -H 'Authorization: Bearer local-dev-token' -w '%{http_code}\n'</code></pre></div>
-    <p><code>-w '%{http_code}\n'</code>は、最後にステータスコードを表示させる指定です。</p>
+    <p><code>-w '\n'</code>は応答のあとで改行させる指定、<code>-w '%{http_code}\n'</code>は最後にステータスコードを表示させる指定です。</p>
     <details class="result"><summary>成功したときの見た目</summary><div class="inner"><pre>[]
 {"id":1,"name":"さくら","message":"はじめまして！","created_at":"2026-11-18 07:12:18"}
 {"error":"削除する権限がありません"}
@@ -718,8 +721,8 @@ git push</code></pre></div>
 </table></div>
 <p>本番に削除用のトークンを登録します。入力を求められたら、推測されにくい文字列を入れます。</p>
 <div class="code"><pre><code>npx wrangler secret put ADMIN_TOKEN</code></pre></div>
-<p>登録した値はダッシュボードでも見られず、変えるときは登録し直します。試しに<code>vars</code>の<code>MAX_MESSAGE_LENGTH</code>を<code>"10"</code>に変えてデプロイし、11文字以上の投稿がはじかれることを確かめてみましょう。フォームには文字数の上限を設けていないので、上限を変えるのは<code>vars</code>だけで済みます。</p>
-<div class="note"><b>型の定義を作り直す</b><p><code>wrangler.jsonc</code>のbindingや<code>vars</code>を変えたら、<code>npx wrangler types</code>を実行して<code>worker-configuration.d.ts</code>を作り直します。エディターがコードの<code>env.DB</code>などを正しく補完するようになります。最後に<code>Install @types/node</code>と表示されることがありますが、このハンズオンでは入れなくてかまいません。</p></div>
+<p>登録した値はダッシュボードでも見られず、変えるときは登録し直します。試しに<code>vars</code>の<code>MAX_MESSAGE_LENGTH</code>を<code>"10"</code>に変えてデプロイし、11文字以上の投稿がはじかれることを確かめてみましょう。フォームの名前とひとことの欄には文字数の上限を設けず、APIで確かめているので、上限を変えるのは<code>vars</code>だけで済みます。</p>
+<div class="note"><b>型の定義を作り直す</b><p><code>wrangler.jsonc</code>のbindingや<code>vars</code>を変えたら、<code>npx wrangler types</code>を実行して<code>worker-configuration.d.ts</code>を作り直します。エディターがコードの<code>env.DB</code>などを正しく補完するようになります。最後に<code>Install @types/node</code>と表示されることがありますが、このハンズオンでは入れなくてかまいません。<code>.dev.vars</code>がない状態で実行すると、Secretの<code>ADMIN_TOKEN</code>が型の定義から消えるので、先に<code>.dev.vars</code>を作っておきます。</p></div>
 <label class="done-check"><input type="checkbox" data-done="c" id="done-c">掲示板を公開できた</label>
 
 <h2 id="domain">5. 独自ドメインの設定方法</h2>
